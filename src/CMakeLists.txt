@@ -45,3 +45,15 @@ if(ENABLE_ASAN)
 endif()
 
 install(TARGETS omnipp DESTINATION bin)
+
+set(EXTRA_NAMES ocat cat)
+
+foreach(EXTRA_NAME IN LISTS EXTRA_NAMES)
+    add_custom_command(TARGET omnipp POST_BUILD
+        # ${CMAKE_COMMAND} -E copy ensures cross-platform compatibility
+        COMMAND ${CMAKE_COMMAND} -E copy 
+            $<TARGET_FILE:omnipp> 
+            $<TARGET_FILE_DIR:omnipp>/${EXTRA_NAME}${CMAKE_EXECUTABLE_SUFFIX}
+        COMMENT "Copying omnipp to ${EXTRA_NAME}..."
+    )
+endforeach()

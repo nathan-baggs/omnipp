@@ -1,0 +1,17 @@
+{
+  "name": "beman-cstring-view",
+  "version-semver": "@VERSION@",
+  "description": "A null-terminated string view.",
+  "homepage": "https://github.com/bemanproject/cstring_view",
+  "license": "Apache-2.0 WITH LLVM-exception",
+  "dependencies": [
+    {
+      "name": "vcpkg-cmake",
+      "host": true
+    },
+    {
+      "name": "vcpkg-cmake-config",
+      "host": true
+    }
+  ]
+}

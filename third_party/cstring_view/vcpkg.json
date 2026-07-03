@@ -1,0 +1,10 @@
+{
+  "name": "beman-cstring-view",
+  "version-semver": "0.1.0",
+  "dependencies": [
+    {
+      "name": "gtest",
+      "host": true
+    }
+  ]
+}

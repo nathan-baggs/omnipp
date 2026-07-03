@@ -9,7 +9,7 @@ build:
 	docker run --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" native-gcc-musl cmake --build build --config Debug
 
 run: build
-	./build/src/Debug/project
+	./build/src/Debug/omnipp
 
 tests: build
 	./build/tests/Debug/unit_tests --gtest_color=yes

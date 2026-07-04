@@ -34,6 +34,7 @@ target_compile_options(omnipp PRIVATE
   -Wvarargs
   -Wvla
   -Wwrite-strings
+  -ggdb
 )
 
 target_link_libraries(omnipp INTERFACE omnipp_lib)

@@ -3,15 +3,15 @@
 #include <cstddef>
 #include <cstring>
 #include <expected>
-#include <filesystem>
+#include <format>
 #include <optional>
+#include <print>
 #include <span>
 #include <string>
 #include <tuple>
 
 #include <errno.h>
 #include <fcntl.h>
-#include <format>
 #include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -35,43 +35,29 @@ struct FdCloser
     }
 };
 
+struct AutoMap
+{
+    ~AutoMap()
+    {
+        if (map)
+        {
+            ::munmap(map, size);
+        }
+    }
+    void *map;
+    std::size_t size;
+};
+
 }
 
-class MappedFile
+struct MappedFile
 {
+    using is_source = bool;
 
-  public:
-    MappedFile(::beman::cstring_view path) noexcept
-        : path_{path}
-        , map_{}
+    template <class N>
+    [[nodiscard]] auto operator()(::beman::cstring_view path) const noexcept -> std::expected<std::size_t, std::string>
     {
-    }
-
-    ~MappedFile() noexcept
-    {
-        if (map_)
-        {
-            const auto [ptr, size] = *map_;
-            ::munmap(ptr, size);
-        }
-    }
-
-    MappedFile(const MappedFile &) = delete;
-    MappedFile &operator=(const MappedFile &) = delete;
-    MappedFile(MappedFile &&) = default;
-    MappedFile &operator=(MappedFile &&) = default;
-
-    [[nodiscard]] auto read() noexcept -> std::expected<std::span<const std::byte>, std::string>
-    {
-        if (map_)
-        {
-            const auto [ptr, size] = *map_;
-            const auto *begin = reinterpret_cast<const std::byte *>(ptr);
-
-            return std::span(begin, begin + size);
-        }
-
-        const auto fd = AutoRelease<int, impl::FdCloser, -1>{::openat(AT_FDCWD, path_.c_str(), O_RDONLY)};
+        const auto fd = AutoRelease<int, impl::FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY)};
         if (!fd)
         {
             return std::unexpected{std::format("failed to open file: {}", ::strerror(errno))};
@@ -91,15 +77,11 @@ class MappedFile
             return std::unexpected{std::format("failed to map file: {}", ::strerror(errno))};
         }
 
-        map_ = std::make_optional(std::make_tuple(map_ptr, size));
+        const auto auto_map = impl::AutoMap{map_ptr, size};
 
         const auto *begin = reinterpret_cast<const std::byte *>(map_ptr);
-        return std::span(begin, begin + size);
+        return N{}(std::span(begin, begin + size));
     }
-
-  private:
-    ::beman::cstring_view path_;
-    std::optional<std::tuple<void *, std::size_t>> map_;
 };
 
 static_assert(Source<MappedFile>);

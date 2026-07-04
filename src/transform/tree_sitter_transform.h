@@ -50,11 +50,11 @@ constexpr auto to_byte_span(std::string_view str) -> std::span<const std::byte>
 
 }
 
-class TreeSitter
+struct TreeSitter
 {
-  public:
-    [[nodiscard]] auto transform(std::span<const std::byte> data) const noexcept
-        -> std::expected<std::vector<std::byte>, std::string>
+    template <class N>
+    [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
+        -> std::expected<std::size_t, std::string>
     {
         const auto *language = tree_sitter_cpp();
 
@@ -174,10 +174,8 @@ class TreeSitter
 
         formatted_buffer.append_range(impl::to_byte_span(impl::reset));
 
-        return formatted_buffer;
+        return N{}(formatted_buffer);
     }
-
-  private:
 };
 
 static_assert(Transform<TreeSitter>);

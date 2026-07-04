@@ -44,10 +44,11 @@ constexpr auto convert_raw_args(const int argc, char **argv) noexcept
 auto main(int argc, char **argv) -> int
 {
     const auto [name, args] = convert_raw_args(argc, argv);
+    const auto config = om::load_config();
 
     if (name == "cat"sv || name == "ocat"sv)
     {
-        om::cat(args);
+        om::cat(config, args);
     }
     else
     {

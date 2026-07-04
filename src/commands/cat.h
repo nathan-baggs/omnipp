@@ -7,6 +7,7 @@
 
 #include <beman/cstring_view/cstring_view.hpp>
 
+#include "config/config.h"
 #include "pipeline/pipeline.h"
 #include "sink/stdout_sink.h"
 #include "source/mapped_file_source.h"
@@ -15,15 +16,32 @@
 namespace om
 {
 
-inline auto cat(std::span<const ::beman::cstring_view> args) //
-    pre(!std::ranges::empty(args))
+namespace impl
 {
-    const auto pipeline = source::MappedFile{} | transform::TreeSitter{} | sink::Stdout{};
 
-    const auto res = pipeline(args[0]);
+auto execute(const auto &pipeline, auto arg)
+{
+    const auto res = pipeline(arg);
     if (!res)
     {
         throw std::runtime_error(res.error());
+    }
+}
+
+}
+
+inline auto cat(const Config &config, std::span<const ::beman::cstring_view> args) //
+    pre(!std::ranges::empty(args))
+{
+    if (config.colour_output)
+    {
+        const auto pipeline = source::MappedFile{} | transform::TreeSitter{} | sink::Stdout{};
+        impl::execute(pipeline, args[0]);
+    }
+    else
+    {
+        const auto pipeline = source::MappedFile{} | sink::Stdout{};
+        impl::execute(pipeline, args[0]);
     }
 }
 

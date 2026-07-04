@@ -136,3 +136,17 @@ RUN wget -q https://www.nasm.us/pub/nasm/releasebuilds/${NASM_VERSION}/nasm-${NA
     && rm -r nasm-${NASM_VERSION}
 
 RUN apt-get remove --purge -y file gcc g++ zlib1g-dev libssl-dev libgmp-dev libmpfr-dev libmpc-dev libisl-dev
+
+ARG TREE_SITTER_CLI_VERSION=0.26.10
+
+RUN set -ex \
+    && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y unzip \
+    && ARCH=$(uname -m | sed 's/x86_64/x64/;s/aarch64/arm64/') \
+    && if [ "$ARCH" != "x64" ] && [ "$ARCH" != "arm64" ]; then echo "Unsupported architecture: $(uname -m)"; exit 1; fi \
+    && wget -q "https://github.com/tree-sitter/tree-sitter/releases/download/v${TREE_SITTER_CLI_VERSION}/tree-sitter-cli-linux-${ARCH}.zip" \
+    && unzip "tree-sitter-cli-linux-${ARCH}.zip" \
+    && mv tree-sitter /usr/local/bin/tree-sitter \
+    && chmod +x /usr/local/bin/tree-sitter \
+    && rm "tree-sitter-cli-linux-${ARCH}.zip" \
+    && apt-get remove --purge -y unzip \
+    && tree-sitter --version

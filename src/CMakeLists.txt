@@ -1,5 +1,12 @@
 add_library(omnipp_lib INTERFACE
-  hello.h
+  commands/cat.h
+  concepts/concepts.h
+  config/config.h
+  pipeline/pipeline.h
+  sink/stdout_sink.h
+  source/mapped_file_source.h
+  transform/tree_sitter_transform.h
+  utils/auto_release.h
 )
 
 target_compile_options(omnipp_lib INTERFACE

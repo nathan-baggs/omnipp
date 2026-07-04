@@ -1,19 +1,13 @@
 #pragma once
 
 #include <cstddef>
-#include <cstring>
 #include <expected>
-#include <format>
-#include <optional>
-#include <print>
-#include <span>
+#include <ranges>
 #include <string>
-#include <tuple>
 
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -28,23 +22,11 @@ namespace om::source
 
 namespace impl
 {
-
-struct AutoMap
-{
-    ~AutoMap()
-    {
-        if (map)
-        {
-            ::munmap(map, size);
-        }
-    }
-    void *map;
-    std::size_t size;
-};
-
+constexpr auto static_buffer_size = 2zu * 1024zu * 1024zu;
+alignas(static_buffer_size) static auto static_buffer = std::array<std::byte, static_buffer_size>{};
 }
 
-struct MappedFile
+struct ReadFile
 {
     using is_source = bool;
 
@@ -64,20 +46,29 @@ struct MappedFile
         }
 
         const auto size = stx.stx_size;
-
-        auto *map_ptr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (!map_ptr)
+        if (size > impl::static_buffer_size)
         {
-            return std::unexpected{std::format("failed to map file: {}", ::strerror(errno))};
+            return std::unexpected(
+                std::format("file too large for this source: {} > {}", size, impl::static_buffer_size));
         }
 
-        const auto auto_map = impl::AutoMap{map_ptr, size};
+        auto read_amount = std::size_t{};
+        while (read_amount != size)
+        {
+            const auto read_this_iter =
+                ::pread(fd, std::ranges::data(impl::static_buffer) + read_amount, size - read_amount, read_amount);
+            if (read_this_iter == -1)
+            {
+                return std::unexpected(std::format("failed to read: {} [{}/{} bytes]", path, read_amount, size));
+            }
 
-        const auto *begin = reinterpret_cast<const std::byte *>(map_ptr);
-        return N{}(std::span(begin, begin + size));
+            read_amount += read_this_iter;
+        }
+
+        return N{}(std::span{std::ranges::data(impl::static_buffer), size});
     }
 };
 
-static_assert(Source<MappedFile>);
+static_assert(Source<ReadFile>);
 
 }

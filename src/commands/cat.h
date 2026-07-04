@@ -11,6 +11,7 @@
 #include "pipeline/pipeline.h"
 #include "sink/stdout.h"
 #include "source/mapped_file.h"
+#include "source/read_file.h"
 #include "transform/tree_sitter.h"
 
 namespace om
@@ -35,12 +36,12 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
 {
     if (config.colour_output)
     {
-        const auto pipeline = source::MappedFile{} | transform::TreeSitter{} | sink::Stdout{};
+        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Stdout{};
         impl::execute(pipeline, args[0]);
     }
     else
     {
-        const auto pipeline = source::MappedFile{} | sink::Stdout{};
+        const auto pipeline = source::ReadFile{} | sink::Stdout{};
         impl::execute(pipeline, args[0]);
     }
 }

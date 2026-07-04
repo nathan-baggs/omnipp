@@ -20,7 +20,7 @@ using namespace std::literals;
 
 extern "C" const ::TSLanguage *tree_sitter_cpp();
 
-namespace om
+namespace om::transform
 {
 
 namespace impl
@@ -50,7 +50,7 @@ constexpr auto to_byte_span(std::string_view str) -> std::span<const std::byte>
 
 }
 
-class TreeSitterTransform
+class TreeSitter
 {
   public:
     [[nodiscard]] auto transform(std::span<const std::byte> data) const noexcept
@@ -180,6 +180,6 @@ class TreeSitterTransform
   private:
 };
 
-static_assert(Transform<TreeSitterTransform>);
+static_assert(Transform<TreeSitter>);
 
 }

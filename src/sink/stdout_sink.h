@@ -8,10 +8,10 @@
 
 #include "concepts/concepts.h"
 
-namespace om
+namespace om::sink
 {
 
-class StdoutSink
+class Stdout
 {
   public:
     [[nodiscard]] auto write(std::span<const std::byte> data) const noexcept -> std::expected<std::size_t, std::string>
@@ -23,6 +23,6 @@ class StdoutSink
   private:
 };
 
-static_assert(Sink<StdoutSink>);
+static_assert(Sink<Stdout>);
 
 }

@@ -22,7 +22,7 @@
 #include "concepts/concepts.h"
 #include "utils/auto_release.h"
 
-namespace om
+namespace om::source
 {
 
 namespace impl
@@ -37,17 +37,17 @@ struct FdCloser
 
 }
 
-class MappedFileSource
+class MappedFile
 {
 
   public:
-    MappedFileSource(::beman::cstring_view path) noexcept
+    MappedFile(::beman::cstring_view path) noexcept
         : path_{path}
         , map_{}
     {
     }
 
-    ~MappedFileSource() noexcept
+    ~MappedFile() noexcept
     {
         if (map_)
         {
@@ -56,10 +56,10 @@ class MappedFileSource
         }
     }
 
-    MappedFileSource(const MappedFileSource &) = delete;
-    MappedFileSource &operator=(const MappedFileSource &) = delete;
-    MappedFileSource(MappedFileSource &&) = default;
-    MappedFileSource &operator=(MappedFileSource &&) = default;
+    MappedFile(const MappedFile &) = delete;
+    MappedFile &operator=(const MappedFile &) = delete;
+    MappedFile(MappedFile &&) = default;
+    MappedFile &operator=(MappedFile &&) = default;
 
     [[nodiscard]] auto read() noexcept -> std::expected<std::span<const std::byte>, std::string>
     {
@@ -102,6 +102,6 @@ class MappedFileSource
     std::optional<std::tuple<void *, std::size_t>> map_;
 };
 
-static_assert(Source<MappedFileSource>);
+static_assert(Source<MappedFile>);
 
 }

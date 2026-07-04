@@ -7,6 +7,8 @@ project(
   LANGUAGES C CXX
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 
 add_subdirectory(third_party)

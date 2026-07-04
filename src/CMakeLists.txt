@@ -3,9 +3,9 @@ add_library(omnipp_lib INTERFACE
   concepts/concepts.h
   config/config.h
   pipeline/pipeline.h
-  sink/stdout_sink.h
-  source/mapped_file_source.h
-  transform/tree_sitter_transform.h
+  sink/stdout.h
+  source/mapped_file.h
+  transform/tree_sitter.h
   utils/auto_release.h
 )
 

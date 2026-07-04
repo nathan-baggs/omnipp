@@ -9,9 +9,9 @@
 
 #include "config/config.h"
 #include "pipeline/pipeline.h"
-#include "sink/stdout_sink.h"
-#include "source/mapped_file_source.h"
-#include "transform/tree_sitter_transform.h"
+#include "sink/stdout.h"
+#include "source/mapped_file.h"
+#include "transform/tree_sitter.h"
 
 namespace om
 {

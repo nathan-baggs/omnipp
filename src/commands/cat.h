@@ -10,6 +10,7 @@
 #include "config/config.h"
 #include "pipeline/pipeline.h"
 #include "sink/stdout.h"
+#include "sink/write.h"
 #include "source/mapped_file.h"
 #include "source/read_file.h"
 #include "transform/tree_sitter.h"
@@ -36,12 +37,12 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
 {
     if (config.colour_output)
     {
-        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Stdout{};
+        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
         impl::execute(pipeline, args[0]);
     }
     else
     {
-        const auto pipeline = source::ReadFile{} | sink::Stdout{};
+        const auto pipeline = source::ReadFile{} | sink::Write{};
         impl::execute(pipeline, args[0]);
     }
 }

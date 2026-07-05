@@ -49,22 +49,8 @@ struct MappedFile
     using is_source = bool;
 
     template <class N>
-    [[nodiscard]] auto operator()(::beman::cstring_view path) const noexcept -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
-        const auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY)};
-        if (!fd)
-        {
-            return std::unexpected{std::format("failed to open file: {}", ::strerror(errno))};
-        }
-
-        struct statx stx{};
-        if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
-        {
-            return std::unexpected{std::format("failed to statx file: {}", ::strerror(errno))};
-        }
-
-        const auto size = stx.stx_size;
-
         auto *map_ptr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (!map_ptr)
         {

@@ -14,6 +14,7 @@
 #include "source/mapped_file.h"
 #include "source/read_file.h"
 #include "transform/tree_sitter.h"
+#include "utils/auto_release.h"
 
 namespace om
 {
@@ -21,9 +22,33 @@ namespace om
 namespace impl
 {
 
-auto execute(const auto &pipeline, auto arg)
+struct File
 {
-    const auto res = pipeline(arg);
+    AutoRelease<int, FdCloser, -1> fd;
+    std::size_t size;
+};
+
+auto open_file(::beman::cstring_view path) -> File
+{
+    auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY)};
+    if (!fd)
+    {
+        throw std::runtime_error(std::format("failed to open: {}", path));
+    }
+
+    struct statx stx{};
+    if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
+    {
+        throw std::runtime_error(std::format("failed to statx file: {}", ::strerror(errno)));
+    }
+
+    return {.fd = std::move(fd), .size = stx.stx_size};
+}
+
+template <class... Args>
+auto execute(const auto &pipeline, Args &&...args)
+{
+    const auto res = pipeline(std::forward<Args>(args)...);
     if (!res)
     {
         throw std::runtime_error(res.error());
@@ -35,15 +60,25 @@ auto execute(const auto &pipeline, auto arg)
 inline auto cat(const Config &config, std::span<const ::beman::cstring_view> args) //
     pre(!std::ranges::empty(args))
 {
-    if (config.colour_output)
+    const auto file = impl::open_file(args[0]);
+
+    if (file.size < source::ReadFile::max_size)
     {
-        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Cout{};
-        impl::execute(pipeline, args[0]);
+        if (config.colour_output)
+        {
+            const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Cout{};
+            impl::execute(pipeline, file.fd.get(), file.size);
+        }
+        else
+        {
+            const auto pipeline = source::ReadFile{} | sink::Cout{};
+            impl::execute(pipeline, file.fd.get(), file.size);
+        }
     }
     else
     {
         const auto pipeline = source::ReadFile{} | sink::Cout{};
-        impl::execute(pipeline, args[0]);
+        impl::execute(pipeline, file.fd.get(), file.size);
     }
 }
 

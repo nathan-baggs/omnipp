@@ -25,63 +25,47 @@ namespace om::source
 
 namespace impl
 {
-constexpr auto static_buffer_size = 10zu * 1024zu * 1024zu;
-constexpr auto huge_page_alignment = 2u * 1024u * 1024u;
-alignas(huge_page_alignment) static auto static_buffer = std::array<std::byte, static_buffer_size>{};
 }
 
 struct ReadFile
 {
     using is_source = bool;
 
+    constexpr static auto max_size = 10zu * 1024zu * 1024zu;
+
     template <class N>
-    [[nodiscard]] auto operator()(::beman::cstring_view path) const noexcept -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
-        const auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY)};
-        if (!fd)
-        {
-            return std::unexpected{std::format("failed to open file: {}", ::strerror(errno))};
-        }
+        constexpr auto huge_page_alignment = 2u * 1024u * 1024u;
+        alignas(huge_page_alignment) static auto static_buffer = std::array<std::byte, max_size>{};
 
-        struct statx stx{};
-        if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
-        {
-            return std::unexpected{std::format("failed to statx file: {}", ::strerror(errno))};
-        }
-
-        auto dynamic_buffer = std::unique_ptr<std::byte[]>{};
-        auto buffer_span = std::span<std::byte>{};
-
-        const auto size = stx.stx_size;
-        if (size > impl::static_buffer_size)
-        {
-            dynamic_buffer.reset(new std::byte[size]);
-            if (!dynamic_buffer)
-            {
-                return std::unexpected("failed to allocate dynamic buffer"s);
-            }
-
-            buffer_span = {dynamic_buffer.get(), size};
-        }
-        else
-        {
-            buffer_span = impl::static_buffer;
-        }
+        auto bytes_output = std::size_t{};
 
         auto read_amount = std::size_t{};
         while (read_amount != size)
         {
-            const auto read_this_iter =
-                ::pread(fd, std::ranges::data(buffer_span) + read_amount, size - read_amount, read_amount);
+            const auto chunk_size = std::min(std::ranges::size(static_buffer), size - read_amount);
+            const auto read_this_iter = ::pread(fd, std::ranges::data(static_buffer), chunk_size, read_amount);
             if (read_this_iter == -1)
             {
-                return std::unexpected(std::format("failed to read: {} [{}/{} bytes]", path, read_amount, size));
+                return std::unexpected(std::format("failed to read: [{}/{} bytes]", read_amount, size));
+            }
+            else if (read_this_iter == 0)
+            {
+                break;
+            }
+
+            const auto processed = N{}(std::span(std::ranges::data(static_buffer) + read_amount, read_this_iter));
+            if (!processed)
+            {
+                return std::unexpected(processed.error());
             }
 
             read_amount += read_this_iter;
+            bytes_output += *processed;
         }
 
-        return N{}(std::span{std::ranges::data(buffer_span), size});
+        return bytes_output;
     }
 };
 

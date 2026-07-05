@@ -11,6 +11,7 @@
 #include "pipeline/pipeline.h"
 #include "sink/cout.h"
 #include "sink/write.h"
+#include "source/mapped_chunk_file.h"
 #include "source/mapped_file.h"
 #include "source/read_file.h"
 #include "transform/tree_sitter.h"
@@ -66,18 +67,18 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
     {
         if (config.colour_output)
         {
-            const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Cout{};
+            const auto pipeline = source::MappedChunkFile{} | transform::TreeSitter{} | sink::Cout{};
             impl::execute(pipeline, file.fd.get(), file.size);
         }
         else
         {
-            const auto pipeline = source::ReadFile{} | sink::Cout{};
+            const auto pipeline = source::MappedChunkFile{} | sink::Cout{};
             impl::execute(pipeline, file.fd.get(), file.size);
         }
     }
     else
     {
-        const auto pipeline = source::ReadFile{} | sink::Cout{};
+        const auto pipeline = source::MappedChunkFile{} | sink::Cout{};
         impl::execute(pipeline, file.fd.get(), file.size);
     }
 }

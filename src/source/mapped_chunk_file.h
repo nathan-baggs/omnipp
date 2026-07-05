@@ -27,7 +27,7 @@
 namespace om::source
 {
 
-struct MappedFile
+struct MappedChunkFile
 {
     using is_source = bool;
 
@@ -35,7 +35,7 @@ struct MappedFile
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
         auto *map_ptr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
-        if (!map_ptr)
+        if (map_ptr == MAP_FAILED)
         {
             return std::unexpected{std::format("failed to map file: {}", ::strerror(errno))};
         }
@@ -43,9 +43,33 @@ struct MappedFile
         const auto auto_map = AutoMap{map_ptr, size};
 
         const auto *begin = reinterpret_cast<const std::byte *>(map_ptr);
-        return N{}(std::span(begin, begin + size));
+        const auto map_span = std::span(begin, size);
+
+        volatile auto dummy = std::uint8_t{};
+        auto bytes_output = std::size_t{};
+
+        constexpr static auto chunk_size = 10zu * 1024zu * 1024zu;
+
+        for (const auto chunk : map_span | std::views::chunk(chunk_size))
+        {
+            for (auto i = 0zu; i < std::ranges::size(chunk); i += 4096u)
+            {
+                dummy += static_cast<std::uint8_t>(chunk[i]);
+            }
+
+            const auto processed = N{}(chunk);
+            if (!processed)
+            {
+                return std::unexpected(processed.error());
+            }
+
+            bytes_output += *processed;
+        }
+
+        return bytes_output;
     }
 };
 
-static_assert(Source<MappedFile>);
+static_assert(Source<MappedChunkFile>);
+
 }

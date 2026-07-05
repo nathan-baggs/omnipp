@@ -57,7 +57,7 @@ RUN wget -q https://musl.libc.org/releases/musl-${MUSL_VERSION}.tar.gz -O - | ta
     && ./configure \
         --prefix=${SYSROOT} \
         --enable-static \
-        --disable-shared \
+        --enable-shared \
     && make -j`nproc` \
     && make install \
     && cd .. \
@@ -80,7 +80,7 @@ RUN if [ "${GCC_VERSION}" = "trunk" ]; then \
         --prefix=/usr/local \
         --target=${TARGET} \
         --enable-languages=c,c++ \
-        --disable-shared \
+        --enable-shared \
         --enable-static \
         --with-system-zlib \
         --enable-libgomp \

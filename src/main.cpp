@@ -16,7 +16,7 @@ using namespace std::literals;
 namespace
 {
 
-auto handle_contract_violation(const std::contracts::contract_violation &cv) -> void
+[[maybe_unused]] auto handle_contract_violation(const std::contracts::contract_violation &cv) -> void
 {
     std::println(std::cerr, "contract violation {}", cv.comment());
     std::println(std::cerr, "{}", std::stacktrace::current(2));

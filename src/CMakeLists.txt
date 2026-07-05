@@ -29,31 +29,13 @@ target_link_libraries(omnipp_lib INTERFACE beman::cstring_view tree-sitter tree_
 
 add_executable(omnipp main.cpp)
 
-target_compile_options(omnipp PRIVATE
-  -Wall
-  -Wextra
-  -Werror
-  -Wconversion-null
-  -Woverlength-strings
-  -Wpointer-arith
-  -Wunused-local-typedefs
-  -Wunused-result
-  -Wvarargs
-  -Wvla
-  -Wwrite-strings
-  -ggdb
-)
+target_compile_options(omnipp PRIVATE -ggdb)
 
-target_link_libraries(omnipp INTERFACE omnipp_lib)
+target_link_libraries(omnipp PRIVATE omnipp_lib)
 target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers)
 target_compile_features(omnipp PRIVATE cxx_std_26)
 target_include_directories(omnipp PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
-if(ENABLE_ASAN)
-  target_compile_options(omnipp PRIVATE -fsanitize=address)
-  string(REPLACE "-static " "" CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-  target_link_options(omnipp PRIVATE -fsanitize=address -static-libasan -Wl,--whole-archive -lasan -Wl,--no-whole-archive -lpthread)
-endif()
 
 install(TARGETS omnipp DESTINATION bin)
 

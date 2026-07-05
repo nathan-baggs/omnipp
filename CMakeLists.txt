@@ -1,3 +1,7 @@
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
+  message(FATAL_ERROR "In-source builds are forbidden. Use -B build")
+endif()
+
 cmake_minimum_required(VERSION 3.30)
 
 project(
@@ -7,9 +11,27 @@ project(
   LANGUAGES C CXX
 )
 
+list(REMOVE_ITEM CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "gcc_s_asneeded")
+list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES "gcc_s_asneeded")
+
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+add_compile_options(
+  $<$<CONFIG:Debug>:-fsanitize=undefined>
+  $<$<CONFIG:Debug>:-ggdb>
+  $<$<CONFIG:Debug>:-fcontract-evaluation-semantic=enforce>
+  $<$<CONFIG:RelWithDebInfo>:-fcontract-evaluation-semantic=ignore>
+  $<$<CONFIG:RelWithDebInfo>:-march=native>
+)
+add_link_options(
+  $<$<CONFIG:Debug>:-fsanitize=undefined>
+  $<$<CONFIG:Debug>:-lpthread>
+  $<$<NOT:$<CONFIG:Debug>>:-static>
+  $<$<NOT:$<CONFIG:Debug>>:-static-libgcc>
+  $<$<NOT:$<CONFIG:Debug>>:-static-libstdc++>
+)
 
 add_subdirectory(third_party)
 add_subdirectory(src)

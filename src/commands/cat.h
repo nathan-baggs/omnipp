@@ -37,12 +37,12 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
 {
     if (config.colour_output)
     {
-        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
+        const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Stdout{};
         impl::execute(pipeline, args[0]);
     }
     else
     {
-        const auto pipeline = source::ReadFile{} | sink::Write{};
+        const auto pipeline = source::ReadFile{} | sink::Stdout{};
         impl::execute(pipeline, args[0]);
     }
 }

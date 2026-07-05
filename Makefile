@@ -12,7 +12,7 @@ release:
 	docker run --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" ghcr.io/nathan-baggs/native-gcc-musl:latest cmake --build build --config RelWithDebInfo
 
 run: build
-	docker run --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" -e LD_LIBRARY_PATH=/usr/local/x86_64-linux-musl/lib64:/usr/local/x86_64-linux-musl/lib  ghcr.io/nathan-baggs/native-gcc-musl:latest ./build/src/Debug/ocat ./src/main.cpp
+	docker run -t --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" -e LD_LIBRARY_PATH=/usr/local/x86_64-linux-musl/lib64:/usr/local/x86_64-linux-musl/lib  ghcr.io/nathan-baggs/native-gcc-musl:latest ./build/src/Debug/ocat ./src/main.cpp
 
 tests: build
 	./build/tests/Debug/unit_tests --gtest_color=yes

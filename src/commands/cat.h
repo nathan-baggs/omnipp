@@ -1,14 +1,16 @@
 #pragma once
 
+#include <cstring>
 #include <print>
 #include <span>
 #include <stdexcept>
 #include <string_view>
 
+#include <fcntl.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <beman/cstring_view/cstring_view.hpp>
-#include <unistd.h>
 
 #include "config/config.h"
 #include "pipeline/pipeline.h"
@@ -36,7 +38,7 @@ struct File
 
 auto open_file(::beman::cstring_view path) -> File
 {
-    auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY)};
+    auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, path.c_str(), O_RDONLY | O_NOATIME)};
     if (!fd)
     {
         throw std::runtime_error(std::format("failed to open: {}", path));
@@ -46,6 +48,11 @@ auto open_file(::beman::cstring_view path) -> File
     if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
     {
         throw std::runtime_error(std::format("failed to statx file: {}", ::strerror(errno)));
+    }
+
+    if (::posix_fadvise(fd, 0, stx.stx_size, POSIX_FADV_SEQUENTIAL | POSIX_FADV_WILLNEED) != 0)
+    {
+        throw std::runtime_error(std::format("failed to advise: {}", ::strerror(errno)));
     }
 
     return {.fd = std::move(fd), .size = stx.stx_size};

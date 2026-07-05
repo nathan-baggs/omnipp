@@ -46,7 +46,7 @@ auto main(int argc, char **argv) -> int
     const auto [name, args] = convert_raw_args(argc, argv);
     const auto config = om::load_config();
 
-    if (name == "cat"sv || name == "ocat"sv)
+    if (name == "cat"sv || name.starts_with("ocat"))
     {
         om::cat(config, args);
     }

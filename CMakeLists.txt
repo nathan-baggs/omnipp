@@ -19,8 +19,8 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options(
+  -ggdb
   $<$<CONFIG:Debug>:-fsanitize=undefined>
-  $<$<CONFIG:Debug>:-ggdb>
   $<$<CONFIG:Debug>:-fcontract-evaluation-semantic=enforce>
   $<$<CONFIG:RelWithDebInfo>:-fcontract-evaluation-semantic=ignore>
   $<$<CONFIG:RelWithDebInfo>:-march=native>

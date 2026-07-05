@@ -67,18 +67,18 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
     {
         if (config.colour_output)
         {
-            const auto pipeline = source::MappedChunkFile{} | transform::TreeSitter{} | sink::Cout{};
+            const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
             impl::execute(pipeline, file.fd.get(), file.size);
         }
         else
         {
-            const auto pipeline = source::MappedChunkFile{} | sink::Cout{};
+            const auto pipeline = source::ReadFile{} | sink::Write{};
             impl::execute(pipeline, file.fd.get(), file.size);
         }
     }
     else
     {
-        const auto pipeline = source::MappedChunkFile{} | sink::Cout{};
+        const auto pipeline = source::ReadFile{} | sink::Write{};
         impl::execute(pipeline, file.fd.get(), file.size);
     }
 }

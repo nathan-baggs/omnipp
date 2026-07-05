@@ -11,18 +11,21 @@
 namespace om::sink
 {
 
-struct Stdout
+struct Cout
 {
     using is_sink = bool;
 
     [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
         -> std::expected<std::size_t, std::string>
     {
-        std::cout.write(reinterpret_cast<const char *>(data.data()), data.size());
-        return data.size();
+        const auto str =
+            std::string_view(reinterpret_cast<const char *>(std::ranges::data(data)), std::ranges::size(data));
+        std::cout << str;
+
+        return std::ranges::size(data);
     }
 };
 
-static_assert(Sink<Stdout>);
+static_assert(Sink<Cout>);
 
 }

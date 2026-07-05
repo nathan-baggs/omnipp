@@ -3,7 +3,7 @@ add_library(omnipp_lib INTERFACE
   concepts/concepts.h
   config/config.h
   pipeline/pipeline.h
-  sink/stdout.h
+  sink/cout.h
   source/mapped_file.h
   transform/tree_sitter.h
   utils/auto_release.h

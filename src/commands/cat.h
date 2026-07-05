@@ -14,9 +14,11 @@
 
 #include "config/config.h"
 #include "pipeline/pipeline.h"
+#include "sink/Splice.h"
 #include "sink/cout.h"
 #include "sink/send_file.h"
 #include "sink/write.h"
+#include "source/Splice.h"
 #include "source/mapped_chunk_file.h"
 #include "source/mapped_file.h"
 #include "source/read_file.h"
@@ -82,7 +84,7 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
 
     if (impl::can_zero_copy())
     {
-        const auto pipeline = source::ZeroCopyRead{} | sink::SendFile{};
+        const auto pipeline = source::Splice{} | sink::Splice{};
         impl::execute(pipeline, file.fd.get(), file.size);
         return;
     }

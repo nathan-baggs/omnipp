@@ -5,15 +5,20 @@
 #include <stdexcept>
 #include <string_view>
 
+#include <sys/stat.h>
+
 #include <beman/cstring_view/cstring_view.hpp>
+#include <unistd.h>
 
 #include "config/config.h"
 #include "pipeline/pipeline.h"
 #include "sink/cout.h"
+#include "sink/send_file.h"
 #include "sink/write.h"
 #include "source/mapped_chunk_file.h"
 #include "source/mapped_file.h"
 #include "source/read_file.h"
+#include "source/zero_copy_read.h"
 #include "transform/tree_sitter.h"
 #include "utils/auto_release.h"
 
@@ -56,12 +61,24 @@ auto execute(const auto &pipeline, Args &&...args)
     }
 }
 
+auto can_zero_copy() noexcept -> bool
+{
+    return !::isatty(STDOUT_FILENO);
+}
+
 }
 
 inline auto cat(const Config &config, std::span<const ::beman::cstring_view> args) //
     pre(!std::ranges::empty(args))
 {
     const auto file = impl::open_file(args[0]);
+
+    if (impl::can_zero_copy())
+    {
+        const auto pipeline = source::ZeroCopyRead{} | sink::SendFile{};
+        impl::execute(pipeline, file.fd.get(), file.size);
+        return;
+    }
 
     if (file.size < source::ReadFile::max_size)
     {

@@ -19,6 +19,7 @@
 #include "sink/cout.h"
 #include "sink/send_file.h"
 #include "sink/write.h"
+#include "source/DirectSplice.h"
 #include "source/Splice.h"
 #include "source/copy_file_range.h"
 #include "source/mapped_chunk_file.h"
@@ -83,6 +84,11 @@ auto can_middleman_splice(int out_mode) noexcept -> bool
     return S_ISCHR(out_mode) || S_ISREG(out_mode);
 }
 
+auto can_direct_pipe(int out_mode) noexcept -> bool
+{
+    return S_ISFIFO(out_mode);
+}
+
 auto is_terminal_output() noexcept -> bool
 {
     return ::isatty(STDOUT_FILENO) == 1;
@@ -104,6 +110,12 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
     if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
     {
         const auto pipeline = source::CopyFileRange{} | NullSink{};
+        impl::execute(pipeline, file.fd.get(), file.size);
+        return;
+    }
+    else if (impl::can_direct_pipe(out_stx.stx_mode))
+    {
+        const auto pipeline = source::DirectSplice{} | NullSink{};
         impl::execute(pipeline, file.fd.get(), file.size);
         return;
     }

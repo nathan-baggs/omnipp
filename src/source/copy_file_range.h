@@ -38,8 +38,8 @@ struct CopyFileRange
 
         while (offset != size)
         {
-            static constexpr auto max_chunk = 1024 * 1024zu * 1024zu;
-            const auto chunk_size = std::min(static_cast<std::size_t>(max_chunk), size - offset);
+            static constexpr auto max_chunk = 1024zu * 1024zu * 1024zu;
+            const auto chunk_size = std::min(max_chunk, size - offset);
 
             const auto copied_this_iter = ::copy_file_range(fd, nullptr, STDOUT_FILENO, nullptr, chunk_size, 0);
             if (copied_this_iter == -1)

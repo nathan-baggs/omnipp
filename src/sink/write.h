@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstring>
 #include <expected>
 #include <iostream>
 #include <span>
@@ -28,7 +29,8 @@ struct Write
             if (written_this_iter == -1)
             {
                 return std::unexpected(
-                    std::format("failed to write: [{}/{} bytes]", write_amount, std::ranges::size(data)));
+                    std::format(
+                        "failed to write: [{}/{} bytes] {}", write_amount, std::ranges::size(data), strerror(errno)));
             }
 
             write_amount += written_this_iter;

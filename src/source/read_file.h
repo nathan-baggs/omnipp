@@ -55,7 +55,7 @@ struct ReadFile
                 break;
             }
 
-            const auto processed = N{}(std::span(std::ranges::data(static_buffer) + read_amount, read_this_iter));
+            const auto processed = N{}(std::span(std::ranges::data(static_buffer), read_this_iter));
             if (!processed)
             {
                 return std::unexpected(processed.error());

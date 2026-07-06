@@ -12,6 +12,7 @@
 
 #include <beman/cstring_view/cstring_view.hpp>
 
+#include "concepts/concepts.h"
 #include "config/config.h"
 #include "pipeline/pipeline.h"
 #include "sink/Splice.h"
@@ -19,6 +20,7 @@
 #include "sink/send_file.h"
 #include "sink/write.h"
 #include "source/Splice.h"
+#include "source/copy_file_range.h"
 #include "source/mapped_chunk_file.h"
 #include "source/mapped_file.h"
 #include "source/read_file.h"
@@ -36,6 +38,7 @@ struct File
 {
     AutoRelease<int, FdCloser, -1> fd;
     std::size_t size;
+    int mode;
 };
 
 auto open_file(::beman::cstring_view path) -> File
@@ -47,7 +50,7 @@ auto open_file(::beman::cstring_view path) -> File
     }
 
     struct statx stx{};
-    if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
+    if (::statx(fd, "", AT_EMPTY_PATH, STATX_SIZE | STATX_MODE, &stx) != 0)
     {
         throw std::runtime_error(std::format("failed to statx file: {}", ::strerror(errno)));
     }
@@ -57,7 +60,7 @@ auto open_file(::beman::cstring_view path) -> File
         throw std::runtime_error(std::format("failed to advise: {}", ::strerror(errno)));
     }
 
-    return {.fd = std::move(fd), .size = stx.stx_size};
+    return {.fd = std::move(fd), .size = stx.stx_size, .mode = stx.stx_mode};
 }
 
 template <class... Args>
@@ -70,9 +73,19 @@ auto execute(const auto &pipeline, Args &&...args)
     }
 }
 
-auto can_zero_copy() noexcept -> bool
+auto can_copy_file_range(int in_mode, int out_mode) noexcept -> bool
 {
-    return !::isatty(STDOUT_FILENO);
+    return S_ISREG(in_mode) && S_ISREG(out_mode);
+}
+
+auto can_middleman_splice(int out_mode) noexcept -> bool
+{
+    return S_ISCHR(out_mode) || S_ISREG(out_mode);
+}
+
+auto is_terminal_output() noexcept -> bool
+{
+    return ::isatty(STDOUT_FILENO) == 1;
 }
 
 }
@@ -82,30 +95,38 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
 {
     const auto file = impl::open_file(args[0]);
 
-    if (impl::can_zero_copy())
+    struct statx out_stx{};
+    if (::statx(STDOUT_FILENO, "", AT_EMPTY_PATH, STATX_MODE, &out_stx) != 0)
+    {
+        throw std::runtime_error("failed to statx stdout");
+    }
+
+    if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
+    {
+        const auto pipeline = source::CopyFileRange{} | NullSink{};
+        impl::execute(pipeline, file.fd.get(), file.size);
+        return;
+    }
+    else if (impl::can_middleman_splice(out_stx.stx_mode))
     {
         const auto pipeline = source::Splice{} | sink::Splice{};
         impl::execute(pipeline, file.fd.get(), file.size);
         return;
     }
-
-    if (file.size < source::ReadFile::max_size)
+    else
     {
-        if (config.colour_output)
+        if (config.colour_output || impl::is_terminal_output())
         {
             const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
             impl::execute(pipeline, file.fd.get(), file.size);
+            return;
         }
         else
         {
             const auto pipeline = source::ReadFile{} | sink::Write{};
             impl::execute(pipeline, file.fd.get(), file.size);
+            return;
         }
-    }
-    else
-    {
-        const auto pipeline = source::ReadFile{} | sink::Write{};
-        impl::execute(pipeline, file.fd.get(), file.size);
     }
 }
 

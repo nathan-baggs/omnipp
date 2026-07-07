@@ -50,9 +50,9 @@ constexpr auto to_byte_span(std::string_view str) -> std::span<const std::byte>
 
 }
 
-struct TreeSitter
+template <class Next>
+struct TreeSitterNode
 {
-    template <class N>
     [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
         -> std::expected<std::size_t, std::string>
     {
@@ -174,10 +174,16 @@ struct TreeSitter
 
         formatted_buffer.append_range(impl::to_byte_span(impl::reset));
 
-        return N{}(formatted_buffer);
+        return next(formatted_buffer);
     }
+
+    Next next;
 };
 
-static_assert(Transform<TreeSitter>);
+struct TreeSitter : BaseTransform<TreeSitterNode>
+{
+};
+
+static_assert(IsTransform<TreeSitter>);
 
 }

@@ -10,6 +10,7 @@
 #include <beman/cstring_view/cstring_view.hpp>
 
 #include "commands/cat.h"
+#include "commands/grep.h"
 
 using namespace std::literals;
 
@@ -49,6 +50,10 @@ auto main(int argc, char **argv) -> int
     if (name == "cat"sv || name.starts_with("ocat"))
     {
         om::cat(config, args);
+    }
+    else if (name == "grep"sv || name.starts_with("ogrep"))
+    {
+        om::grep(config, args);
     }
     else
     {

@@ -8,18 +8,16 @@ namespace om
 namespace impl
 {
 template <Composable L, Composable R>
-struct Composed
+struct Composed : impl::Source, impl::Transform // a bit gross but ok for now
 {
-    using is_sink = bool;
+    template <class Next>
+    constexpr auto operator()(Next next) const
+    {
+        return left(right(std::move(next)));
+    }
 
     L left;
     R right;
-
-    template <class... Args>
-    constexpr auto operator()(Args &&...args) const noexcept -> std::expected<std::size_t, std::string>
-    {
-        return left.template operator()<R>(std::forward<Args>(args)...);
-    }
 };
 
 }
@@ -27,13 +25,14 @@ struct Composed
 template <Composable L, Composable R>
 constexpr auto operator|(L left, R right)
 {
-    return impl::Composed{std::move(left), std::move(right)};
-}
-
-template <class L1, class L2, Composable R>
-constexpr auto operator|(impl::Composed<L1, L2> left, R right)
-{
-    return std::move(left.left) | (std::move(left.right) | std::move(right));
+    if constexpr (IsSink<R>)
+    {
+        return left(right());
+    }
+    else
+    {
+        return impl::Composed{.left = std::move(left), .right = std::move(right)};
+    }
 }
 
 }

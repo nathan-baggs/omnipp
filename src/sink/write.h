@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <cstring>
 #include <expected>
-#include <iostream>
+#include <format>
 #include <span>
 #include <string>
 
@@ -14,7 +14,8 @@
 namespace om::sink
 {
 
-struct Write
+template <class T>
+struct WriteNode
 {
     using is_sink = bool;
 
@@ -40,6 +41,10 @@ struct Write
     }
 };
 
-static_assert(Sink<Write>);
+struct Write : BaseSink<WriteNode>
+{
+};
+
+static_assert(IsSink<Write>);
 
 }

@@ -15,17 +15,17 @@
 #include "concepts/concepts.h"
 #include "config/config.h"
 #include "pipeline/pipeline.h"
-#include "sink/Splice.h"
-#include "sink/cout.h"
-#include "sink/send_file.h"
+// #include "sink/Splice.h"
+// #include "sink/cout.h"
+// #include "sink/send_file.h"
 #include "sink/write.h"
-#include "source/DirectSplice.h"
-#include "source/Splice.h"
-#include "source/copy_file_range.h"
-#include "source/mapped_chunk_file.h"
-#include "source/mapped_file.h"
+// #include "source/DirectSplice.h"
+// #include "source/Splice.h"
+// #include "source/copy_file_range.h"
+// #include "source/mapped_chunk_file.h"
+// #include "source/mapped_file.h"
 #include "source/read_file.h"
-#include "source/zero_copy_read.h"
+// #include "source/zero_copy_read.h"
 #include "transform/tree_sitter.h"
 #include "utils/auto_release.h"
 
@@ -96,7 +96,7 @@ auto is_terminal_output() noexcept -> bool
 
 }
 
-inline auto cat(const Config &config, std::span<const ::beman::cstring_view> args) //
+inline auto cat([[maybe_unused]] const Config &config, std::span<const ::beman::cstring_view> args) //
     pre(!std::ranges::empty(args))
 {
     const auto file = impl::open_file(args[0]);
@@ -107,39 +107,42 @@ inline auto cat(const Config &config, std::span<const ::beman::cstring_view> arg
         throw std::runtime_error("failed to statx stdout");
     }
 
-    if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
-    {
-        const auto pipeline = source::CopyFileRange{} | NullSink{};
-        impl::execute(pipeline, file.fd.get(), file.size);
-        return;
-    }
-    else if (impl::can_direct_pipe(out_stx.stx_mode))
-    {
-        const auto pipeline = source::DirectSplice{} | NullSink{};
-        impl::execute(pipeline, file.fd.get(), file.size);
-        return;
-    }
-    else if (impl::can_middleman_splice(out_stx.stx_mode))
-    {
-        const auto pipeline = source::Splice{} | sink::Splice{};
-        impl::execute(pipeline, file.fd.get(), file.size);
-        return;
-    }
-    else
-    {
-        if (config.colour_output || impl::is_terminal_output())
-        {
-            const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
-            impl::execute(pipeline, file.fd.get(), file.size);
-            return;
-        }
-        else
-        {
-            const auto pipeline = source::ReadFile{} | sink::Write{};
-            impl::execute(pipeline, file.fd.get(), file.size);
-            return;
-        }
-    }
+    // if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
+    // {
+    //     const auto pipeline = source::CopyFileRange{} | NullSink{};
+    //     impl::execute(pipeline, file.fd.get(), file.size);
+    //     return;
+    // }
+    // else if (impl::can_direct_pipe(out_stx.stx_mode))
+    // {
+    //     const auto pipeline = source::DirectSplice{} | NullSink{};
+    //     impl::execute(pipeline, file.fd.get(), file.size);
+    //     return;
+    // }
+    // else if (impl::can_middleman_splice(out_stx.stx_mode))
+    // {
+    //     const auto pipeline = source::Splice{} | sink::Splice{};
+    //     impl::execute(pipeline, file.fd.get(), file.size);
+    //     return;
+    // }
+    // else
+    // {
+    //     if (config.colour_output || impl::is_terminal_output())
+    //     {
+    //         const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
+    //         impl::execute(pipeline, file.fd.get(), file.size);
+    //         return;
+    //     }
+    //     else
+    //     {
+    //         const auto pipeline = source::ReadFile{} | sink::Write{};
+    //         impl::execute(pipeline, file.fd.get(), file.size);
+    //         return;
+    //     }
+    // }
+
+    const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
+    impl::execute(pipeline, file.fd.get(), file.size);
 }
 
 }

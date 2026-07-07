@@ -27,13 +27,13 @@ namespace impl
 {
 }
 
-struct ReadFile
+template <class Next>
+struct ReadFileNode
 {
     using is_source = bool;
 
     constexpr static auto max_size = 10zu * 1024zu * 1024zu;
 
-    template <class N>
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
         constexpr auto huge_page_alignment = 2u * 1024u * 1024u;
@@ -55,7 +55,7 @@ struct ReadFile
                 break;
             }
 
-            const auto processed = N{}(std::span(std::ranges::data(static_buffer), read_this_iter));
+            const auto processed = next(std::span(std::ranges::data(static_buffer), read_this_iter));
             if (!processed)
             {
                 return std::unexpected(processed.error());
@@ -67,8 +67,14 @@ struct ReadFile
 
         return bytes_output;
     }
+
+    Next next;
 };
 
-static_assert(Source<ReadFile>);
+struct ReadFile : BaseSource<ReadFileNode>
+{
+};
+
+static_assert(IsSource<ReadFile>);
 
 }

@@ -23,15 +23,9 @@ using namespace std::literals;
 namespace om::source
 {
 
-namespace impl
+template <class Next>
+struct CopyFileRangeNode
 {
-}
-
-struct CopyFileRange
-{
-    using is_source = bool;
-
-    template <class N>
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
         auto offset = std::size_t{};
@@ -56,8 +50,14 @@ struct CopyFileRange
 
         return offset;
     }
+
+    [[maybe_unused]] Next next;
 };
 
-static_assert(Source<CopyFileRange>);
+struct CopyFileRange : BaseSource<CopyFileRangeNode>
+{
+};
+
+static_assert(IsSource<CopyFileRange>);
 
 }

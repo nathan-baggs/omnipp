@@ -27,11 +27,9 @@
 namespace om::source
 {
 
-struct MappedFile
+template <class Next>
+struct MappedFileNode
 {
-    using is_source = bool;
-
-    template <class N>
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
         auto *map_ptr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
@@ -43,9 +41,16 @@ struct MappedFile
         const auto auto_map = AutoMap{map_ptr, size};
 
         const auto *begin = reinterpret_cast<const std::byte *>(map_ptr);
-        return N{}(std::span(begin, begin + size));
+        return next(std::span(begin, begin + size));
     }
+
+    Next next;
 };
 
-static_assert(Source<MappedFile>);
+struct MappedFile : BaseSource<MappedFileNode>, BaseTransform<MappedFileNode>
+{
+};
+
+static_assert(IsSource<MappedFile>);
+static_assert(IsTransform<MappedFile>);
 }

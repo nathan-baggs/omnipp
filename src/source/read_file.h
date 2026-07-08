@@ -23,15 +23,9 @@ using namespace std::literals;
 namespace om::source
 {
 
-namespace impl
-{
-}
-
 template <class Next>
 struct ReadFileNode
 {
-    using is_source = bool;
-
     constexpr static auto max_size = 10zu * 1024zu * 1024zu;
 
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>

@@ -3,8 +3,6 @@
 #include <cstddef>
 #include <cstdio>
 #include <expected>
-#include <iostream>
-#include <span>
 #include <string>
 
 #include <fcntl.h>
@@ -17,10 +15,9 @@ using namespace std::literals;
 namespace om::sink
 {
 
-struct Splice
+template <class Next>
+struct SpliceNode
 {
-    using is_sink = bool;
-
     [[nodiscard]] auto operator()(int fd, std::size_t size, std::size_t) const noexcept
         -> std::expected<std::size_t, std::string>
     {
@@ -42,8 +39,14 @@ struct Splice
 
         return write_amount;
     }
+
+    Next next;
 };
 
-static_assert(Sink<Splice>);
+struct Splice : BaseSink<SpliceNode>
+{
+};
+
+static_assert(IsSink<Splice>);
 
 }

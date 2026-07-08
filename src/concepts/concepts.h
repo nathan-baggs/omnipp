@@ -66,15 +66,6 @@ struct BaseNode : T, State
 
 }
 
-struct NullSink
-{
-    using is_sink = bool;
-    auto operator()(auto &&...) const -> std::expected<std::size_t, std::string>
-    {
-        return 0;
-    }
-};
-
 template <template <class> class Node, class State = impl::EmptyState>
 struct BaseSource : impl::BaseNode<impl::Source, Node, State>
 {

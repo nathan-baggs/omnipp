@@ -39,7 +39,7 @@ target_include_directories(omnipp PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 install(TARGETS omnipp DESTINATION bin)
 
-set(EXTRA_NAMES ocat cat)
+set(EXTRA_NAMES ocat ogrep)
 
 foreach(EXTRA_NAME IN LISTS EXTRA_NAMES)
     add_custom_command(TARGET omnipp POST_BUILD

@@ -3,6 +3,7 @@
 #include <print>
 #include <ranges>
 #include <stacktrace>
+#include <stdexcept>
 #include <string_view>
 #include <tuple>
 #include <vector>
@@ -44,20 +45,33 @@ constexpr auto convert_raw_args(const int argc, char **argv) noexcept
 
 auto main(int argc, char **argv) -> int
 {
-    const auto [name, args] = convert_raw_args(argc, argv);
-    const auto config = om::load_config();
+    try
+    {
+        const auto [name, args] = convert_raw_args(argc, argv);
+        const auto config = om::load_config();
 
-    if (name == "cat"sv || name.starts_with("ocat"))
-    {
-        om::cat(config, args);
+        if (name == "cat"sv || name.starts_with("ocat"))
+        {
+            om::cat(config, args);
+        }
+        else if (name == "grep"sv || name.starts_with("ogrep"))
+        {
+            om::grep(config, args);
+        }
+        else
+        {
+            std::println("omnipp");
+        }
     }
-    else if (name == "grep"sv || name.starts_with("ogrep"))
+    catch (const std::runtime_error &e)
     {
-        om::grep(config, args);
+        std::println("{}", e.what());
+        std::println(std::cerr, "{}", std::stacktrace::current());
     }
-    else
+    catch (...)
     {
-        std::println("omnipp");
+        std::println("unknown exception");
+        std::println(std::cerr, "{}", std::stacktrace::current());
     }
 
     return 0;

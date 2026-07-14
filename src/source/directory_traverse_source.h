@@ -20,17 +20,9 @@ using namespace std::literals;
 namespace om::source
 {
 
-namespace impl
+template <class Next>
+struct DirectoryTraverseNode
 {
-}
-
-struct DirectoryTraverse
-{
-    using is_source = bool;
-
-    constexpr static auto max_size = 10zu * 1024zu * 1024zu;
-
-    template <class N>
     [[nodiscard]] auto operator()(beman::cstring_view dir) const noexcept -> std::expected<std::size_t, std::string>
     {
         const auto root = std::filesystem::path{dir.c_str()};
@@ -43,16 +35,21 @@ struct DirectoryTraverse
 
         for (const auto &entry : std::filesystem::recursive_directory_iterator(root))
         {
+            if (!std::filesystem::is_regular_file(entry))
+            {
+                continue;
+            }
+
             auto fd = AutoRelease<int, FdCloser, -1>{::openat(AT_FDCWD, entry.path().c_str(), O_RDONLY)};
             if (!fd)
             {
                 return std::unexpected{std::format("failed to open file: {}", entry.path())};
             }
 
-            const auto processed = N{}(fd.get(), std::filesystem::file_size(entry));
+            const auto processed = next(fd.get(), std::filesystem::file_size(entry));
             if (!processed)
             {
-                return processed.error();
+                return std::unexpected{processed.error()};
             }
 
             matches += *processed;
@@ -60,8 +57,14 @@ struct DirectoryTraverse
 
         return matches;
     }
+
+    Next next;
 };
 
-static_assert(Source<DirectoryTraverse>);
+struct DirectoryTraverse : BaseSource<DirectoryTraverseNode>
+{
+};
+
+static_assert(IsSource<DirectoryTraverse>);
 
 }

@@ -11,21 +11,30 @@
 namespace om::sink
 {
 
-struct Cout
+template <class Next>
+struct CoutNode
 {
-    using is_sink = bool;
-
     [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
         -> std::expected<std::size_t, std::string>
     {
         const auto str =
             std::string_view(reinterpret_cast<const char *>(std::ranges::data(data)), std::ranges::size(data));
-        std::cout << str;
+
+        return (*this)(str);
+    }
+
+    [[nodiscard]] auto operator()(std::string_view data) const noexcept -> std::expected<std::size_t, std::string>
+    {
+        std::cout << data;
 
         return std::ranges::size(data);
     }
 };
 
-static_assert(Sink<Cout>);
+struct Cout : BaseSink<CoutNode>
+{
+};
+
+static_assert(IsSink<Cout>);
 
 }

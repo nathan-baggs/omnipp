@@ -47,10 +47,9 @@ struct MappedFileNode
     Next next;
 };
 
-struct MappedFile : BaseSource<MappedFileNode>, BaseTransform<MappedFileNode>
+struct MappedFile : BaseSource<MappedFileNode>
 {
 };
 
 static_assert(IsSource<MappedFile>);
-static_assert(IsTransform<MappedFile>);
 }

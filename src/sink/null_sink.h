@@ -17,4 +17,6 @@ struct NullSink : BaseSink<NullSinkNode>
 {
 };
 
+static_assert(IsSink<NullSink>);
+
 }

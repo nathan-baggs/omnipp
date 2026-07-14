@@ -17,8 +17,6 @@ namespace om::sink
 template <class T>
 struct WriteNode
 {
-    using is_sink = bool;
-
     [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
         -> std::expected<std::size_t, std::string>
     {

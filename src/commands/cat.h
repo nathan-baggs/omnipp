@@ -65,16 +65,6 @@ auto open_file(::beman::cstring_view path) -> File
     return {.fd = std::move(fd), .size = stx.stx_size, .mode = stx.stx_mode};
 }
 
-template <class... Args>
-auto execute(const auto &pipeline, Args &&...args)
-{
-    const auto res = pipeline(std::forward<Args>(args)...);
-    if (!res)
-    {
-        throw std::runtime_error(res.error());
-    }
-}
-
 auto can_copy_file_range(int in_mode, int out_mode) noexcept -> bool
 {
     return S_ISREG(in_mode) && S_ISREG(out_mode);
@@ -111,19 +101,19 @@ inline auto cat([[maybe_unused]] const Config &config, std::span<const ::beman::
     if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
     {
         const auto pipeline = source::CopyFileRange{} | sink::NullSink{};
-        impl::execute(pipeline, file.fd.get(), file.size);
+        execute(pipeline, file.fd.get(), file.size);
         return;
     }
     else if (impl::can_direct_pipe(out_stx.stx_mode))
     {
         const auto pipeline = source::DirectSplice{} | sink::NullSink{};
-        impl::execute(pipeline, file.fd.get(), file.size);
+        execute(pipeline, file.fd.get(), file.size);
         return;
     }
     else if (impl::can_middleman_splice(out_stx.stx_mode))
     {
         const auto pipeline = source::Splice{} | sink::Splice{};
-        impl::execute(pipeline, file.fd.get(), file.size);
+        execute(pipeline, file.fd.get(), file.size);
         return;
     }
     else
@@ -131,19 +121,19 @@ inline auto cat([[maybe_unused]] const Config &config, std::span<const ::beman::
         if (config.colour_output || impl::is_terminal_output())
         {
             const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
-            impl::execute(pipeline, file.fd.get(), file.size);
+            execute(pipeline, file.fd.get(), file.size);
             return;
         }
         else
         {
             const auto pipeline = source::ReadFile{} | sink::Write{};
-            impl::execute(pipeline, file.fd.get(), file.size);
+            execute(pipeline, file.fd.get(), file.size);
             return;
         }
     }
 
     const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
-    impl::execute(pipeline, file.fd.get(), file.size);
+    execute(pipeline, file.fd.get(), file.size);
 }
 
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdexcept>
+
 #include "concepts/concepts.h"
 
 namespace om
@@ -32,6 +34,16 @@ constexpr auto operator|(L left, R right)
     else
     {
         return impl::Composed{.left = std::move(left), .right = std::move(right)};
+    }
+}
+
+template <class... Args>
+auto execute(const auto &pipeline, Args &&...args)
+{
+    const auto res = pipeline(std::forward<Args>(args)...);
+    if (!res)
+    {
+        throw std::runtime_error(res.error());
     }
 }
 

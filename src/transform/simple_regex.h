@@ -47,27 +47,28 @@ struct SimpleRegexNode
                     previous_newline == std::string_view::npos ? str.data() : str.data() + previous_newline + 1zu;
                 const auto match_end = match.position() + match.length();
                 const auto next_newline = str.find('\n', match_end);
+                const auto out_end =
+                    next_newline == std::string_view::npos ? str.data() + str.size() : str.data() + next_newline;
 
-                if (next_newline == std::string_view::npos)
+                auto line = std::string_view(start, out_end);
+                while (!line.empty() && (line.front() == '\n' || line.front() == '\r'))
                 {
-                    const auto res = next(std::string_view(start, str.data() + str.size()));
-                    if (!res)
-                    {
-                        return std::unexpected{res.error()};
-                    }
-
-                    ++found;
-
-                    break;
+                    line.remove_prefix(1zu);
                 }
 
-                const auto res = next(std::string_view(start, str.data() + next_newline));
+                const auto res = next(line, true);
                 if (!res)
                 {
                     return std::unexpected{res.error()};
                 }
 
                 ++found;
+
+                if (next_newline == std::string_view::npos)
+                {
+                    break;
+                }
+
                 str = str.subview(next_newline + 1zu);
             }
 

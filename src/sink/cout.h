@@ -23,9 +23,15 @@ struct CoutNode
         return (*this)(str);
     }
 
-    [[nodiscard]] auto operator()(std::string_view data) const noexcept -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(std::string_view data, bool force_newline = false) const noexcept
+        -> std::expected<std::size_t, std::string>
     {
         std::cout << data;
+
+        if (force_newline && data.back() != '\n')
+        {
+            std::cout << '\n';
+        }
 
         return std::ranges::size(data);
     }

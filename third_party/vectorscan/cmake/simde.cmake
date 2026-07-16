@@ -1,0 +1,33 @@
+LIST(APPEND CMAKE_REQUIRED_INCLUDES ${PROJECT_SOURCE_DIR}/simde)
+
+CHECK_INCLUDE_FILES(simde/x86/sse4.2.h SIMDE_SSE42_H_FOUND)
+
+if (SIMDE_SSE42_H_FOUND)
+  set(SIMDE_FLAGS "-DVS_SIMDE_BACKEND")
+  include_directories(${PROJECT_SOURCE_DIR}/simde)
+
+  if (CMAKE_COMPILER_IS_CLANG)
+    set(SIMDE_FLAGS "${SIMDE_FLAGS} -DSIMDE_NO_CHECK_IMMEDIATE_CONSTANT")
+    if (ARCH_PPC64EL)
+        set(SIMDE_FLAGS "${SIMDE_FLAGS} -Wno-deprecated-altivec-src-compat")
+	if (CLANG_MAJOR_VERSION EQUAL 15)
+            set(SIMDE_FLAGS "${SIMDE_FLAGS} -Wno-deprecate-lax-vec-conv-all")
+        endif ()
+    endif()
+  endif()
+
+  if (ARCH_IA32 OR ARCH_X86_64)
+    set(BUILD_SIMDE_NATIVE TRUE)
+    set(ARCH_C_FLAGS "-msse2")
+    set(ARCH_CXX_FLAGS "-msse2")
+    set(X86_ARCH "x86-64")
+  endif()
+  if (BUILD_SIMDE_NATIVE)
+    set(SIMDE_FLAGS "${SIMDE_FLAGS} -DVS_SIMDE_NATIVE")
+  else()
+    set(SIMDE_FLAGS "${SIMDE_FLAGS} -DSIMDE_ENABLE_OPENMP -fopenmp-simd")
+  endif()
+
+else()
+  message(FATAL_ERROR "SIMDe backend requested but SIMDe is not available on the system")
+endif()

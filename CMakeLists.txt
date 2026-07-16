@@ -21,8 +21,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 add_compile_options(
   -ggdb
   $<$<CONFIG:Debug>:-fsanitize=undefined>
-  $<$<CONFIG:Debug>:-fcontract-evaluation-semantic=enforce>
-  $<$<CONFIG:RelWithDebInfo>:-fcontract-evaluation-semantic=ignore>
+  $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Debug>>:-fcontract-evaluation-semantic=enforce>
+  $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:-fcontract-evaluation-semantic=ignore>
   $<$<CONFIG:RelWithDebInfo>:-march=native>
 )
 add_link_options(

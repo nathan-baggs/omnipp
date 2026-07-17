@@ -43,7 +43,7 @@ struct BaseNode : T, State
     }
 
     template <class Next>
-    constexpr auto operator()(Next next) const
+    constexpr auto operator()(Next next)
     {
         if constexpr (std::same_as<State, EmptyState>)
         {

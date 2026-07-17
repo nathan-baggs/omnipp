@@ -25,7 +25,7 @@ target_compile_options(omnipp_lib INTERFACE
 
 target_compile_features(omnipp_lib INTERFACE cxx_std_26)
 target_include_directories(omnipp_lib INTERFACE ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(omnipp_lib INTERFACE beman::cstring_view tree-sitter tree_sitter_parsers)
+target_link_libraries(omnipp_lib INTERFACE beman::cstring_view tree-sitter tree_sitter_parsers hs)
 
 add_executable(omnipp main.cpp)
 
@@ -34,7 +34,13 @@ target_compile_options(omnipp PRIVATE -ggdb)
 target_link_libraries(omnipp PRIVATE omnipp_lib)
 target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers hs)
 target_compile_features(omnipp PRIVATE cxx_std_26)
-target_include_directories(omnipp PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_include_directories(omnipp PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_BINARY_DIR}/third_party/vectorscan
+    ${CMAKE_BINARY_DIR}/third_party/vectorscan/src
+    ${CMAKE_SOURCE_DIR}/third_party/vectorscan/include
+    ${CMAKE_SOURCE_DIR}/third_party/vectorscan/src
+)
 
 install(TARGETS omnipp DESTINATION bin)
 

@@ -13,7 +13,7 @@ template <Composable L, Composable R>
 struct Composed : impl::Source, impl::Transform // a bit gross but ok for now
 {
     template <class Next>
-    constexpr auto operator()(Next next) const
+    constexpr auto operator()(Next next)
     {
         return left(right(std::move(next)));
     }

@@ -13,6 +13,7 @@
 #include "source/directory_traverse_source.h"
 #include "source/mapped_file.h"
 #include "transform/simple_regex.h"
+#include "transform/vectorscan_regex.h"
 
 namespace om
 {
@@ -24,11 +25,11 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
         throw std::runtime_error("expected args: [regex, location]");
     }
 
-    const auto regex = std::string{args[0].c_str()};
+    const auto regex = args[0];
     const auto location = args[1];
 
     const auto pipeline =
-        source::DirectoryTraverse{} | source::MappedFile{} | transform::SimpleRegex{regex} | sink::Cout{};
+        source::DirectoryTraverse{} | source::MappedFile{} | transform::VectorScan{regex} | sink::Cout{};
 
     execute(pipeline, location);
 }

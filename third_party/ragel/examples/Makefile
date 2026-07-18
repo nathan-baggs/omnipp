@@ -242,11 +242,11 @@ AUTOMAKE = ${SHELL} /home/nathan/projects/omnipp/third_party/ragel/missing autom
 AWK = mawk
 CC = /usr/local/bin/x86_64-linux-musl-gcc
 CCDEPMODE = depmode=gcc3
-CFLAGS = -g -O2
+CFLAGS = -static -march=native -ggdb
 CPPFLAGS = 
 CXX = /usr/local/bin/x86_64-linux-musl-g++
 CXXDEPMODE = depmode=gcc3
-CXXFLAGS = -static
+CXXFLAGS = -static -march=native -ggdb
 CYGPATH_W = echo
 DEFS = -DHAVE_CONFIG_H
 DEPDIR = .deps

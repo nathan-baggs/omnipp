@@ -19,13 +19,19 @@ set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options(
+)
+add_link_options(
+)
+
+add_library(omnipp_global_flags INTERFACE)
+target_compile_options(omnipp_global_flags INTERFACE
   -ggdb
   $<$<CONFIG:Debug>:-fsanitize=undefined>
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Debug>>:-fcontract-evaluation-semantic=enforce>
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:-fcontract-evaluation-semantic=ignore>
   $<$<CONFIG:RelWithDebInfo>:-march=native>
 )
-add_link_options(
+target_link_options(omnipp_global_flags INTERFACE
   $<$<CONFIG:Debug>:-fsanitize=undefined>
   $<$<CONFIG:Debug>:-lpthread>
   $<$<NOT:$<CONFIG:Debug>>:-static>

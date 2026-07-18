@@ -25,14 +25,13 @@ target_compile_options(omnipp_lib INTERFACE
 
 target_compile_features(omnipp_lib INTERFACE cxx_std_26)
 target_include_directories(omnipp_lib INTERFACE ${PROJECT_SOURCE_DIR}/src)
-target_link_libraries(omnipp_lib INTERFACE beman::cstring_view tree-sitter tree_sitter_parsers hs)
 
 add_executable(omnipp main.cpp)
 
 target_compile_options(omnipp PRIVATE -ggdb)
 
 target_link_libraries(omnipp PRIVATE omnipp_lib)
-target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers hs)
+target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers hs omnipp_global_flags)
 target_compile_features(omnipp PRIVATE cxx_std_26)
 target_include_directories(omnipp PRIVATE
     ${CMAKE_SOURCE_DIR}/src

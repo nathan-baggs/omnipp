@@ -16,10 +16,16 @@ target_include_directories(tree_sitter_parsers PRIVATE
     tree-sitter-cpp/src
 )
 
+target_link_libraries(tree-sitter PRIVATE omnipp_global_flags)
+target_link_libraries(tree_sitter_parsers PRIVATE omnipp_global_flags)
+
 include(ExternalProject)
 
 set(RAGEL_PREFIX "${CMAKE_BINARY_DIR}/third_party/ragel")
 set(RAGEL_BIN "${RAGEL_PREFIX}/bin/ragel")
+set(RAGEL_CFLAGS "-static -march=native -ggdb")
+set(RAGEL_CXXFLAGS "-static -march=native -ggdb")
+set(RAGEL_LDFLAGS "-static")
 
 ExternalProject_Add(ragel_ep
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/ragel"
@@ -31,16 +37,18 @@ ExternalProject_Add(ragel_ep
     env
       CC=${CMAKE_C_COMPILER}
       CXX=${CMAKE_CXX_COMPILER}
-      CXXFLAGS=-static
-      LDFLAGS=-static
+      CFLAGS=${RAGEL_CFLAGS}
+      CXXFLAGS=${RAGEL_CXXFLAGS}
+      LDFLAGS=${RAGEL_LDFLAGS}
       <SOURCE_DIR>/configure --prefix=${RAGEL_PREFIX}
 
   BUILD_COMMAND
     env
       CC=${CMAKE_C_COMPILER}
       CXX=${CMAKE_CXX_COMPILER}
-      CXXFLAGS=-static
-      LDFLAGS=-static
+      CFLAGS=${RAGEL_CFLAGS}
+      CXXFLAGS=${RAGEL_CXXFLAGS}
+      LDFLAGS=${RAGEL_LDFLAGS}
       make -j
 
   INSTALL_COMMAND

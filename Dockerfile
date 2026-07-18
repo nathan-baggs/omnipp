@@ -18,7 +18,7 @@ RUN set -ex \
     ca-certificates gcc g++ zlib1g-dev libssl-dev libgmp-dev libmpfr-dev \
     libmpc-dev libisl-dev libssl3 libgmp10 libmpfr6 libmpc3 libisl23 \
     xz-utils ninja-build texinfo meson gnupg bzip2 patch gperf bison \
-    file flex make yasm wget zip git jq curl python3
+    file flex make yasm wget zip git jq curl python3 ccache
 
 RUN mkdir -p ${SYSROOT} \
     && chmod 0777 -R /mnt ${SYSROOT}
@@ -150,3 +150,5 @@ RUN set -ex \
     && rm "tree-sitter-cli-linux-${ARCH}.zip" \
     && apt-get remove --purge -y unzip \
     && tree-sitter --version
+
+RUN mkdir -p /ccache && chmod 1777 /ccache

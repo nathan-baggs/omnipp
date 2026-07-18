@@ -1,0 +1,219 @@
+.\" Copyright (C) 2023 Breno Leitao <leitao@debian.org>
+.\"
+.\" SPDX-License-Identifier: LGPL-2.0-or-later
+.\"
+.TH io_uring_prep_cmd_sock 3 "July 27, 2023" "liburing-2.5" "liburing Manual"
+.SH NAME
+io_uring_prep_cmd_sock \- prepare a command request for a socket
+.SH SYNOPSIS
+.nf
+.B #include <liburing.h>
+.PP
+.BI "void io_uring_prep_cmd_sock(struct io_uring_sqe *" sqe ","
+.BI "                            int " cmd_op ","
+.BI "                            int " fd ","
+.BI "                            int " level ","
+.BI "                            int " optname ","
+.BI "                            void " *optval ","
+.BI "                            int " optlen ");"
+.fi
+.SH DESCRIPTION
+.PP
+The
+.BR io_uring_prep_cmd_sock (3)
+function prepares an cmd request for a socket. The submission queue entry
+.I sqe
+is setup to use the socket file descriptor pointed to by
+.I fd
+to start an command operation defined by
+.I cmd_op.
+
+This is a generic function, and each command has their own individual
+.I level, optname, optval
+values.  The optlen defines the size pointed by
+.I optval.
+
+.SH Available commands
+
+.TP
+.B SOCKET_URING_OP_SIOCINQ
+Returns the amount of queued unread data in the receive buffer.
+The socket must not be in LISTEN state, otherwise an error
+.B -EINVAL
+is returned in the CQE
+.I res
+field.
+The following arguments are not used for this command
+.I level, optname, optval
+and
+.I optlen.
+
+Negative return value means an error.
+
+For more information about this command, please check
+.BR unix(7).
+
+Available since 6.7.
+
+.TP
+.B SOCKET_URING_OP_SIOCOUTQ
+Returns the amount of unsent data in the socket send queue.
+The socket must not be in LISTEN state, otherwise an error
+.B -EINVAL
+is returned in the CQE
+.I res.
+field.
+The following arguments are not used for this command
+.I level, optname, optval
+and
+.I optlen.
+
+Negative return value means an error.
+
+For more information about this command, please check
+.BR unix(7).
+
+.TP
+.B SOCKET_URING_OP_GETSOCKOPT
+Command to get options for the socket referred to by the socket file descriptor
+.I fd.
+The arguments are similar to the
+.BR getsockopt(2)
+system call.
+
+The
+.BR SOCKET_URING_OP_GETSOCKOPT
+command is limited to
+.BR SOL_SOCKET
+.I level.
+
+Differently from the
+.BR getsockopt(2)
+system call, the updated
+.I optlen
+value is returned in the CQE
+.I res
+field, on success. On failure, the CQE
+.I res
+contains a negative error number.
+
+.TP
+.B SOCKET_URING_OP_SETSOCKOPT
+Command to set options for the socket referred to by the socket file descriptor
+.I fd.
+The arguments are similar to the
+.BR setsockopt(2)
+system call.
+
+Available since 6.7.
+
+.TP
+.B SOCKET_URING_OP_TX_TIMESTAMP
+Retrieve transmit timestamps from the socket's error queue. This provides an
+alternative to the traditional
+.BR recvmsg(2)
+error queue interface for obtaining TX timestamps.
+
+The command operates in a polled multishot mode: io_uring will poll the socket
+and keep posting timestamps as CQEs until the request is cancelled or fails.
+The ring must be created with
+.B IORING_SETUP_CQE32
+or
+.B IORING_SETUP_CQE_MIXED
+to provide space for the timestamp data.
+
+The socket must first be configured for timestamping via
+.BR setsockopt(2)
+with
+.B SO_TIMESTAMPING
+at the
+.B SOL_SOCKET
+level, specifying the desired timestamp types (e.g.
+.BR SOF_TIMESTAMPING_TX_SOFTWARE ,
+.BR SOF_TIMESTAMPING_TX_SCHED ,
+.BR SOF_TIMESTAMPING_TX_ACK )
+along with
+.B SOF_TIMESTAMPING_SOFTWARE
+and
+.BR SOF_TIMESTAMPING_OPT_TSONLY .
+
+The following arguments are not used for this command:
+.I level, optname, optval
+and
+.I optlen.
+
+Each timestamp is delivered as a CQE with
+.B IORING_CQE_F_MORE
+set in
+.I cqe->flags
+to indicate more timestamps may follow. The
+.I cqe->res
+field contains the timestamp key
+.RI ( tskey ),
+which corresponds to the byte offset (for TCP) or packet count (for UDP).
+The timestamp type
+.RI ( SCM_TSTAMP_SCHED ,
+.I SCM_TSTAMP_SND
+or
+.IR SCM_TSTAMP_ACK )
+is stored in the upper bits of
+.I cqe->flags
+at offset
+.BR IORING_TIMESTAMP_TYPE_SHIFT .
+If the timestamp is a hardware timestamp, the
+.B IORING_CQE_F_TSTAMP_HW
+flag is set.
+
+The actual timestamp value is stored in the extended CQE area as a
+.B struct io_timespec
+(with 64-bit
+.I tv_sec
+and
+.I tv_nsec
+fields), accessible at
+.IR "(cqe + 1)" .
+
+The final CQE will not have
+.B IORING_CQE_F_MORE
+set, and its
+.I cqe->res
+will contain 0 on success or a negative error code on failure.
+
+Available since 6.17.
+
+.TP
+.B SOCKET_URING_OP_GETSOCKNAME
+Returns the current address to which the socket is bound. The result is
+stored in the buffer pointed to by
+.I optval,
+which should be a pointer to a
+.I struct sockaddr
+(or appropriate variant). The
+.I optlen
+argument specifies the size of the buffer. On success, the CQE
+.I res
+field contains the actual size of the socket address. If the buffer is too
+small, the result is truncated.
+
+This is the io_uring equivalent of
+.BR getsockname (2).
+
+Available since 6.19.
+
+.SH NOTES
+The memory block pointed by
+.I optval
+needs to be valid/live until the CQE returns.
+
+.SH RETURN VALUE
+Dependent on the command.
+
+.SH ERRORS
+The CQE
+.I res
+field will contain the result of the operation.
+.SH SEE ALSO
+.BR io_uring_get_sqe (3),
+.BR io_uring_submit (3),
+.BR io_uring_register (2),
+.BR unix (7)

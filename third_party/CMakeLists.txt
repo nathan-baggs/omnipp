@@ -21,6 +21,37 @@ target_link_libraries(tree_sitter_parsers PRIVATE omnipp_global_flags)
 
 include(ExternalProject)
 
+set(URING_CONFIG_CFLAGS "-O3 -march=native -ggdb -D_GNU_SOURCE")
+set(URING_BUILD_CFLAGS "-O3 -march=native -flto -ggdb -D_GNU_SOURCE")
+
+ExternalProject_Add(liburing_ep
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/liburing"
+  BUILD_IN_SOURCE 1
+  
+  CONFIGURE_COMMAND
+    env
+      CC=${CMAKE_C_COMPILER}
+      CXX=${CMAKE_CXX_COMPILER}
+      CFLAGS=${URING_CONFIG_CFLAGS}
+      <SOURCE_DIR>/configure
+      
+  BUILD_COMMAND
+    env
+      CC=${CMAKE_C_COMPILER}
+      CFLAGS=${URING_BUILD_CFLAGS}
+      make -C <SOURCE_DIR>/src -j liburing.a
+      
+  INSTALL_COMMAND ""
+)
+
+add_library(uring STATIC IMPORTED GLOBAL)
+add_dependencies(uring liburing_ep)
+
+set_target_properties(uring PROPERTIES
+  IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/liburing/src/liburing.a"
+  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/third_party/liburing/src/include"
+)
+
 set(RAGEL_PREFIX "${CMAKE_BINARY_DIR}/third_party/ragel")
 set(RAGEL_BIN "${RAGEL_PREFIX}/bin/ragel")
 set(RAGEL_CFLAGS "-static -march=native -ggdb")

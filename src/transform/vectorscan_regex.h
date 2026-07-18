@@ -58,7 +58,7 @@ struct VectorScanState
             auto compiler_error = std::unique_ptr<::hs_compile_error_t, decltype(hs_compiler_error_free)>{};
             const auto res = ::hs_compile(
                 regex.c_str(),
-                HS_FLAG_MULTILINE,
+                HS_FLAG_MULTILINE | HS_FLAG_SOM_LEFTMOST,
                 HS_MODE_BLOCK,
                 nullptr,
                 std::inout_ptr(db),
@@ -124,7 +124,13 @@ struct VectorScanNode
 
             for (const auto &[begin, end] : ctx.matches)
             {
-                const auto next_res = next(std::string_view(data_str + begin, data_str + end));
+                auto line = std::string_view(data_str + begin, data_str + end);
+                while (!line.empty() && (line.front() == '\n' || line.front() == '\r'))
+                {
+                    line.remove_prefix(1zu);
+                }
+
+                const auto next_res = next(line, true);
                 if (!next_res)
                 {
                     return std::unexpected(next_res.error());

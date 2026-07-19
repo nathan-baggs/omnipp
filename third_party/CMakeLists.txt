@@ -21,26 +21,21 @@ target_link_libraries(tree_sitter_parsers PRIVATE omnipp_global_flags)
 
 include(ExternalProject)
 
-set(URING_CONFIG_CFLAGS "-O3 -march=native -ggdb -D_GNU_SOURCE")
-set(URING_BUILD_CFLAGS "-O3 -march=native -flto -ggdb -D_GNU_SOURCE")
+set(URING_CFLAGS "-O3 -march=native -ggdb -D_GNU_SOURCE -fPIC")
 
 ExternalProject_Add(liburing_ep
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/liburing"
   BUILD_IN_SOURCE 1
-  
   CONFIGURE_COMMAND
     env
       CC=${CMAKE_C_COMPILER}
-      CXX=${CMAKE_CXX_COMPILER}
-      CFLAGS=${URING_CONFIG_CFLAGS}
+      CFLAGS=${URING_CFLAGS}
       <SOURCE_DIR>/configure
-      
   BUILD_COMMAND
     env
       CC=${CMAKE_C_COMPILER}
-      CFLAGS=${URING_BUILD_CFLAGS}
+      CFLAGS=${URING_CFLAGS}
       make -C <SOURCE_DIR>/src -j liburing.a
-      
   INSTALL_COMMAND ""
 )
 

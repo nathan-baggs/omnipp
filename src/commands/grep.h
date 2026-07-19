@@ -1,37 +1,70 @@
 #pragma once
 
 #include <cstring>
+#include <fcntl.h>
 #include <print>
 #include <span>
 #include <stdexcept>
 #include <string_view>
 
+#include <dirent.h>
+
 #include <beman/cstring_view/cstring_view.hpp>
 
-#include "pipeline/pipeline.h"
-#include "sink/cout.h"
-#include "source/directory_traverse_source.h"
-#include "source/mapped_file.h"
-#include "transform/simple_regex.h"
-#include "transform/vectorscan_regex.h"
+#include "config.h"
+#include "utils/event_loop.h"
 
 namespace om
 {
 
-inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman::cstring_view> args) //
+namespace impl
+{
+
+struct OpenAtHandler
+{
+    auto operator()(auto &ev, int fd) const noexcept -> void
+    {
+        std::println("openat success: {}", fd);
+        ev.queue_getdents(fd);
+    }
+};
+
+struct GetDentsHandler
+{
+    auto operator()([[maybe_unused]] auto &ev, bool is_file, ::beman::cstring_view path) const noexcept -> void
+    {
+        std::println("found: {} [is_file: {}]", path, is_file);
+    }
+};
+
+struct CloseHandler
+{
+    auto operator()([[maybe_unused]] auto &ev)
+    {
+        std::println("close called");
+    }
+};
+
+}
+
+inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman::cstring_view> args)
 {
     if (std::ranges::size(args) != 2)
     {
         throw std::runtime_error("expected args: [regex, location]");
     }
 
-    const auto regex = args[0];
+    [[maybe_unused]] const auto regex = args[0];
     const auto location = args[1];
 
-    const auto pipeline =
-        source::DirectoryTraverse{} | source::MappedFile{} | transform::VectorScan{regex} | sink::Cout{};
+    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}};
 
-    execute(pipeline, location);
+    ev.queue_openat(location, O_RDONLY | O_DIRECTORY);
+
+    const auto res = ev.pump();
+    if (!res)
+    {
+        throw std::runtime_error(res.error());
+    }
 }
-
 }

@@ -26,17 +26,15 @@ add_link_options(
 add_library(omnipp_global_flags INTERFACE)
 target_compile_options(omnipp_global_flags INTERFACE
   -ggdb
-  $<$<CONFIG:Debug>:-fsanitize=undefined>
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Debug>>:-fcontract-evaluation-semantic=enforce>
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:-fcontract-evaluation-semantic=ignore>
   $<$<CONFIG:RelWithDebInfo>:-march=native>
 )
 target_link_options(omnipp_global_flags INTERFACE
-  $<$<CONFIG:Debug>:-fsanitize=undefined>
   $<$<CONFIG:Debug>:-lpthread>
-  $<$<NOT:$<CONFIG:Debug>>:-static>
-  $<$<NOT:$<CONFIG:Debug>>:-static-libgcc>
-  $<$<NOT:$<CONFIG:Debug>>:-static-libstdc++>
+  -static
+  -static-libgcc
+  -static-libstdc++
 )
 
 add_subdirectory(third_party)

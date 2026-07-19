@@ -14,7 +14,6 @@ CONFIG_HAVE_KERNEL_TIMESPEC=y
 CONFIG_HAVE_OPEN_HOW=y
 CONFIG_HAVE_STATX=y
 CONFIG_HAVE_GLIBC_STATX=y
-CONFIG_HAVE_CXX=y
 CONFIG_HAVE_STRINGOP_OVERFLOW=y
 CONFIG_HAVE_ARRAY_BOUNDS=y
 CONFIG_HAVE_MEMFD_CREATE=y
@@ -23,6 +22,6 @@ CONFIG_HAVE_FANOTIFY=y
 CONFIG_HAVE_FUTEXV=y
 CONFIG_HAVE_UBLK_HEADER=y
 CC=/usr/local/bin/x86_64-linux-musl-gcc
-CXX=/usr/local/bin/x86_64-linux-musl-g++
-BUILD_CFLAGS=-O3 -march=native -ggdb -D_GNU_SOURCE
+CXX=g++
+BUILD_CFLAGS=-O3 -march=native -ggdb -D_GNU_SOURCE -fPIC
 root=/home/nathan/projects/omnipp/third_party/liburing

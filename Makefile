@@ -14,7 +14,7 @@ release:
 	docker run --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" $(DOCKER_CCACHE) ghcr.io/nathan-baggs/native-gcc-musl:latest cmake --build build --config RelWithDebInfo
 
 run: build
-	docker run -t --rm -u $(shell id -u):$(shell id -g) -v "$(PWD)":"$(PWD)" -w "$(PWD)" $(DOCKER_CCACHE) -e LD_LIBRARY_PATH=/usr/local/x86_64-linux-musl/lib64:/usr/local/x86_64-linux-musl/lib  ghcr.io/nathan-baggs/native-gcc-musl:latest ./build/src/Debug/ocat ./src/main.cpp
+	./build/src/Debug/ogrep '^\s*struct\s+[a-z_]+\s*\{' .
 
 tests: build
 	./build/tests/Debug/unit_tests --gtest_color=yes

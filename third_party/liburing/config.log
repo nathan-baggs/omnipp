@@ -1,42 +1,43 @@
 Compiling test case stringop_overflow
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror -Wstringop-overflow=0 -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror -Wstringop-overflow=0 -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case array_bounds
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror -Warray-bounds=0 -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror -Warray-bounds=0 -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case __kernel_rwf_t
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case __kernel_timespec
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case open_how
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case statx
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case glibc_statx
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case C++
-/usr/local/bin/x86_64-linux-musl-g++ -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf-2.cpp
+g++ -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf-2.cpp
+/home/nathan/projects/omnipp/third_party/liburing/configure: line 161: g++: command not found
 Compiling test case has_ucontext
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
-/usr/local/lib/gcc/x86_64-linux-musl/17.0.0/../../../../x86_64-linux-musl/bin/ld: /tmp/ccxiw9Iu.o: in function `main':
-/tmp/tmp.AsxugV4hOJ/liburing-conf.c:5:(.text.startup+0xb): undefined reference to `getcontext'
-/usr/local/lib/gcc/x86_64-linux-musl/17.0.0/../../../../x86_64-linux-musl/bin/ld: /tmp/tmp.AsxugV4hOJ/liburing-conf.c:6:(.text.startup+0x19): undefined reference to `makecontext'
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
+/usr/local/lib/gcc/x86_64-linux-musl/17.0.0/../../../../x86_64-linux-musl/bin/ld: /tmp/ccxhtXKG.o: in function `main':
+/tmp/tmp.kLUIfNmSEH/liburing-conf.c:5:(.text.startup+0xb): undefined reference to `getcontext'
+/usr/local/lib/gcc/x86_64-linux-musl/17.0.0/../../../../x86_64-linux-musl/bin/ld: /tmp/tmp.kLUIfNmSEH/liburing-conf.c:6:(.text.startup+0x19): undefined reference to `makecontext'
 collect2: error: ld returned 1 exit status
 Compiling test case has_memfd_create
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror=implicit-function-declaration -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Werror=implicit-function-declaration -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case nvme uring cmd
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case futexv
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case discard command
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
-/tmp/tmp.AsxugV4hOJ/liburing-conf.c:1:10: fatal error: linux/blkdev.h: No such file or directory
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
+/tmp/tmp.kLUIfNmSEH/liburing-conf.c:1:10: fatal error: linux/blkdev.h: No such file or directory
     1 | #include <linux/blkdev.h>
       |          ^~~~~~~~~~~~~~~~
 compilation terminated.
 Compiling test case idtype_t
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case nolibc
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case fanotify
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c
 Compiling test case ublk_header
-/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.AsxugV4hOJ/liburing-conf.exe /tmp/tmp.AsxugV4hOJ/liburing-conf.c
+/usr/local/bin/x86_64-linux-musl-gcc -O3 -march=native -ggdb -D_GNU_SOURCE -fPIC -D_GNU_SOURCE -D_LARGEFILE_SOURCE -D_FILE_OFFSET_BITS=64 -include config-host.h -Wno-error=unused-variable -o /tmp/tmp.kLUIfNmSEH/liburing-conf.exe /tmp/tmp.kLUIfNmSEH/liburing-conf.c

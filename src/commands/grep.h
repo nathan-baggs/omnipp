@@ -31,9 +31,15 @@ struct OpenAtHandler
 
 struct GetDentsHandler
 {
-    auto operator()([[maybe_unused]] auto &ev, bool is_file, ::beman::cstring_view path) const noexcept -> void
+    auto operator()([[maybe_unused]] auto &ev, int parent_fd, bool is_file, ::beman::cstring_view path) const noexcept
+        -> void
     {
         std::println("found: {} [is_file: {}]", path, is_file);
+
+        if (!is_file && path != "." && path != "..")
+        {
+            ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY);
+        }
     }
 };
 

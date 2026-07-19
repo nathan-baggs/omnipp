@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cerrno>
 #include <contracts>
 #include <cstddef>
 #include <expected>
@@ -85,16 +86,21 @@ class EventLoop
 
     auto queue_openat(::beman::cstring_view path, int flags) noexcept -> void
     {
+        queue_openat(AT_FDCWD, path, flags);
+    }
+
+    auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void
+    {
         auto *req = next_request<impl::Op::OPENAT>(-1, std::string{path.c_str()});
 
         contract_assert(!!req->path);
-        ::io_uring_prep_openat(req->sqe, AT_FDCWD, req->path->c_str(), flags, 0u);
+        ::io_uring_prep_openat(req->sqe, parent_fd, req->path->c_str(), flags, 0u);
     }
 
     auto queue_getdents(int fd) noexcept -> void
     {
-        auto *req = next_request<impl::Op::GETDENTS>(fd);
-        getdents_queue_.push_back(req);
+        getdents_queue_.push_back({fd});
+        ++in_flight_;
     }
 
     auto queue_close(int fd) noexcept -> void
@@ -108,12 +114,15 @@ class EventLoop
     {
         while (in_flight_ > 0)
         {
-            for (const auto *req : getdents_queue_)
+            auto current_getdents_queue = std::vector<GetDentsRequest>{};
+            std::ranges::swap(current_getdents_queue, getdents_queue_);
+
+            for (const auto &req : current_getdents_queue)
             {
                 for (;;)
                 {
-                    const auto read = ::syscall(
-                        SYS_getdents64, req->fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer));
+                    const auto read =
+                        ::syscall(SYS_getdents64, req.fd, std::ranges::data(req.buffer), std::ranges::size(req.buffer));
 
                     contract_assert(read >= 0);
 
@@ -122,7 +131,7 @@ class EventLoop
                         break;
                     }
 
-                    auto res_span = std::span(std::ranges::data(req->buffer), read);
+                    auto res_span = std::span(std::ranges::data(req.buffer), read);
 
                     while (!std::ranges::empty(res_span))
                     {
@@ -132,20 +141,27 @@ class EventLoop
 
                         if (is_file || is_dir)
                         {
-                            getdents_handler_(*this, is_file, ::beman::cstring_view{dir->d_name});
+                            getdents_handler_(*this, req.fd, is_file, ::beman::cstring_view{dir->d_name});
                         }
 
                         res_span = res_span.subspan(dir->d_reclen);
                     }
                 }
-            }
 
-            if (::io_uring_submit_and_wait(ring_.get(), 1u) < 0)
-            {
-                return std::unexpected("failed to submit pending requests");
+                // queue_close(req.fd);
+                --in_flight_;
             }
 
             ::io_uring_cqe *cqe = {};
+            auto ts = ::__kernel_timespec{.tv_sec = 5, .tv_nsec = 0};
+
+            const auto res = ::io_uring_submit_and_wait_timeout(ring_.get(), &cqe, 1u, &ts, nullptr);
+            if (res < 0)
+            {
+                const auto reason = res == -ETIME ? std::format("timeout") : std::format("{}", -res);
+                return std::unexpected(std::format("failed to submit pending requests: {}", reason));
+            }
+
             auto head = unsigned{};
             auto count = unsigned{};
 
@@ -157,7 +173,7 @@ class EventLoop
                 const auto res = cqe->res;
                 if (res < 0)
                 {
-                    std::println("{} {}", -res, std::to_underlying(req->op));
+                    std::println("{} {} {}", -res, std::to_underlying(req->op), *req->path);
                     contract_assert(res >= 0);
                     free_request(req);
                     ++count;
@@ -176,13 +192,7 @@ class EventLoop
                     }
                     case GETDENTS:
                     {
-                        if (res == 0)
-                        {
-                            queue_close(req->fd);
-                        }
-                        else
-                        {
-                        }
+                        // handle synchronously
                         break;
                     }
                     case CLOSE:
@@ -207,10 +217,14 @@ class EventLoop
     {
         impl::Op op = {};
         ::io_uring_sqe *sqe = {};
-        std::vector<std::byte> buffer = std::vector<std::byte>(32zu * 1024zu);
         std::optional<std::string> path = {};
         int fd = -1;
-        std::size_t offset = {};
+    };
+
+    struct GetDentsRequest
+    {
+        int fd = -1;
+        std::vector<std::byte> buffer = std::vector<std::byte>(32zu * 1024zu);
     };
 
     inline static const auto ring_free = [](auto *r) { ::io_uring_queue_exit(r); };
@@ -218,8 +232,7 @@ class EventLoop
     template <impl::Op O>
     [[nodiscard]] auto next_request(
         int fd = -1,
-        std::optional<std::string> path = std::nullopt,
-        std::size_t offset = 0zu) noexcept -> Request * //
+        std::optional<std::string> path = std::nullopt) noexcept -> Request * //
         pre(!request_free_list_.empty())
     {
         auto *sqe = ::io_uring_get_sqe(ring_.get());
@@ -232,7 +245,6 @@ class EventLoop
         next->sqe = sqe;
         next->path = std::move(path);
         next->fd = fd;
-        next->offset = offset;
 
         io_uring_sqe_set_data(sqe, next);
         ++in_flight_;
@@ -254,6 +266,6 @@ class EventLoop
     std::size_t in_flight_;
     std::vector<Request> request_pool_;
     std::inplace_vector<Request *, impl::queue_size> request_free_list_;
-    std::vector<Request *> getdents_queue_;
+    std::vector<GetDentsRequest> getdents_queue_;
 };
 }

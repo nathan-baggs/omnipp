@@ -140,6 +140,8 @@ class EventLoop
 
             for (const auto &req : current_getdents_queue)
             {
+                ++close_queue_[req.fd];
+
                 for (;;)
                 {
                     const auto read =
@@ -167,6 +169,11 @@ class EventLoop
 
                         res_span = res_span.subspan(dir->d_reclen);
                     }
+                }
+
+                if (--close_queue_[req.fd] == 0)
+                {
+                    queue_close(req.fd);
                 }
 
                 --in_flight_;

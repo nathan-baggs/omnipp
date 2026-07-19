@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -30,6 +31,7 @@ namespace om
 namespace impl
 {
 static constexpr auto queue_size = 4096zu;
+static constexpr auto safe_min = 524'288zu;
 
 enum class Op
 {
@@ -49,6 +51,18 @@ struct linux_dirent64
     char d_name[];
 };
 }
+
+inline auto max_fd() -> std::size_t
+{
+    auto rlim = ::rlimit{};
+    if (::getrlimit(RLIMIT_NOFILE, &rlim) != 0)
+    {
+        return safe_min;
+    }
+
+    return std::min(static_cast<std::size_t>(rlim.rlim_cur), safe_min);
+}
+
 }
 
 template <class OpenAtHandler, class GetDentsHandler, class CloseHandler>
@@ -64,6 +78,7 @@ class EventLoop
         , request_pool_(impl::queue_size)
         , request_free_list_{}
         , getdents_queue_{}
+        , close_queue_(impl::max_fd())
     {
         {
             if (::io_uring_queue_init(impl::queue_size, ring_.get(), 0u) != 0)
@@ -89,12 +104,18 @@ class EventLoop
         queue_openat(AT_FDCWD, path, flags);
     }
 
-    auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void
+    auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void //
+        pre(parent_fd == AT_FDCWD || static_cast<std::size_t>(parent_fd) < impl::safe_min)
     {
-        auto *req = next_request<impl::Op::OPENAT>(-1, std::string{path.c_str()});
+        auto *req = next_request<impl::Op::OPENAT>(parent_fd, std::string{path.c_str()});
 
         contract_assert(!!req->path);
         ::io_uring_prep_openat(req->sqe, parent_fd, req->path->c_str(), flags, 0u);
+
+        if (parent_fd != AT_FDCWD)
+        {
+            ++close_queue_[parent_fd];
+        }
     }
 
     auto queue_getdents(int fd) noexcept -> void
@@ -148,7 +169,6 @@ class EventLoop
                     }
                 }
 
-                // queue_close(req.fd);
                 --in_flight_;
             }
 
@@ -186,6 +206,14 @@ class EventLoop
 
                     case OPENAT:
                     {
+                        if (req->fd != AT_FDCWD)
+                        {
+                            if (--close_queue_[req->fd] == 0)
+                            {
+                                queue_close(req->fd);
+                            }
+                        }
+
                         openat_handler_(*this, res);
 
                         break;
@@ -267,5 +295,6 @@ class EventLoop
     std::vector<Request> request_pool_;
     std::inplace_vector<Request *, impl::queue_size> request_free_list_;
     std::vector<GetDentsRequest> getdents_queue_;
+    std::vector<std::uint32_t> close_queue_;
 };
 }

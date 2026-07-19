@@ -12,6 +12,8 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <sys/syscall.h>
+#include <unistd.h>
 
 #include <beman/cstring_view/cstring_view.hpp>
 #include <liburing.h>
@@ -60,6 +62,7 @@ class EventLoop
         , in_flight_{}
         , request_pool_(impl::queue_size)
         , request_free_list_{}
+        , getdents_queue_{}
     {
         {
             if (::io_uring_queue_init(impl::queue_size, ring_.get(), 0u) != 0)
@@ -70,6 +73,8 @@ class EventLoop
             request_free_list_ = request_pool_ | std::views::transform([](auto &e) { return std::addressof(e); }) |
                                  std::ranges::to<std::inplace_vector<Request *, impl::queue_size>>();
         }
+
+        getdents_queue_.reserve(100zu);
     }
 
     ~EventLoop() = default;
@@ -86,18 +91,10 @@ class EventLoop
         ::io_uring_prep_openat(req->sqe, AT_FDCWD, req->path->c_str(), flags, 0u);
     }
 
-    auto queue_getdents(int fd, std::size_t offset = 0zu) noexcept -> void
+    auto queue_getdents(int fd) noexcept -> void
     {
         auto *req = next_request<impl::Op::GETDENTS>(fd);
-        std::println(
-            "{} {} {} {}",
-            fd,
-            static_cast<void *>(std::ranges::data(req->buffer)),
-            std::ranges::size(req->buffer),
-            offset);
-
-        ::io_uring_prep_rw(
-            IORING_OP_GETDENTS, req->sqe, fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer), offset);
+        getdents_queue_.push_back(req);
     }
 
     auto queue_close(int fd) noexcept -> void
@@ -111,6 +108,38 @@ class EventLoop
     {
         while (in_flight_ > 0)
         {
+            for (const auto *req : getdents_queue_)
+            {
+                for (;;)
+                {
+                    const auto read = ::syscall(
+                        SYS_getdents64, req->fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer));
+
+                    contract_assert(read >= 0);
+
+                    if (read == 0)
+                    {
+                        break;
+                    }
+
+                    auto res_span = std::span(std::ranges::data(req->buffer), read);
+
+                    while (!std::ranges::empty(res_span))
+                    {
+                        const auto *dir = reinterpret_cast<const impl::linux_dirent64 *>(std::ranges::data(res_span));
+                        const auto is_file = dir->d_type == DT_REG;
+                        const auto is_dir = dir->d_type == DT_DIR;
+
+                        if (is_file || is_dir)
+                        {
+                            getdents_handler_(*this, is_file, ::beman::cstring_view{dir->d_name});
+                        }
+
+                        res_span = res_span.subspan(dir->d_reclen);
+                    }
+                }
+            }
+
             if (::io_uring_submit_and_wait(ring_.get(), 1u) < 0)
             {
                 return std::unexpected("failed to submit pending requests");
@@ -153,25 +182,6 @@ class EventLoop
                         }
                         else
                         {
-                            auto res_span = std::span(std::ranges::data(req->buffer), res);
-                            auto next_offset = req->offset;
-
-                            while (!std::ranges::empty(res_span))
-                            {
-                                const auto *dir = reinterpret_cast<impl::linux_dirent64 *>(std::ranges::data(res_span));
-                                const auto is_file = dir->d_type == DT_REG;
-                                const auto is_dir = dir->d_type == DT_DIR;
-
-                                if (is_file || is_dir)
-                                {
-                                    getdents_handler_(*this, is_dir, ::beman::cstring_view{dir->d_name});
-                                }
-
-                                next_offset = dir->d_off;
-                                res_span = res_span.subspan(dir->d_reclen);
-                            }
-
-                            queue_getdents(req->fd, next_offset);
                         }
                         break;
                     }
@@ -244,5 +254,6 @@ class EventLoop
     std::size_t in_flight_;
     std::vector<Request> request_pool_;
     std::inplace_vector<Request *, impl::queue_size> request_free_list_;
+    std::vector<Request *> getdents_queue_;
 };
 }

@@ -16,6 +16,11 @@
 #include <beman/cstring_view/cstring_view.hpp>
 #include <liburing.h>
 
+// great...
+#ifndef IORING_OP_GETDENTS
+#define IORING_OP_GETDENTS 50
+#endif
+
 namespace om
 {
 
@@ -91,7 +96,8 @@ class EventLoop
             std::ranges::size(req->buffer),
             offset);
 
-        ::io_uring_prep_read(req->sqe, fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer), offset);
+        ::io_uring_prep_rw(
+            IORING_OP_GETDENTS, req->sqe, fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer), offset);
     }
 
     auto queue_close(int fd) noexcept -> void

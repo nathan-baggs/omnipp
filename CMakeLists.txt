@@ -29,6 +29,7 @@ target_compile_options(omnipp_global_flags INTERFACE
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:Debug>>:-fcontract-evaluation-semantic=enforce>
   $<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CONFIG:RelWithDebInfo>>:-fcontract-evaluation-semantic=ignore>
   $<$<CONFIG:RelWithDebInfo>:-march=native>
+  $<$<CONFIG:Debug>:-fno-omit-frame-pointer>
 )
 target_link_options(omnipp_global_flags INTERFACE
   $<$<CONFIG:Debug>:-lpthread>

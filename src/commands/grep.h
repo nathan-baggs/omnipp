@@ -38,7 +38,7 @@ struct GetDentsHandler
 
         if (!is_file && path != "." && path != "..")
         {
-            ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY);
+            ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
         }
     }
 };
@@ -65,7 +65,7 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
 
     auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}};
 
-    ev.queue_openat(location, O_RDONLY | O_DIRECTORY);
+    ev.queue_openat(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
 
     const auto res = ev.pump();
     if (!res)

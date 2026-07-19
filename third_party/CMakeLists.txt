@@ -25,26 +25,31 @@ set(URING_CFLAGS "-O3 -march=native -ggdb -D_GNU_SOURCE -fPIC")
 
 ExternalProject_Add(liburing_ep
   SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/liburing"
-  BUILD_IN_SOURCE 1
   CONFIGURE_COMMAND
-    env
-      CC=${CMAKE_C_COMPILER}
-      CFLAGS=${URING_CFLAGS}
-      <SOURCE_DIR>/configure
+    ${CMAKE_COMMAND} -E copy_directory <SOURCE_DIR> <BINARY_DIR>
+    && ${CMAKE_COMMAND} -E env
+         CC=${CMAKE_C_COMPILER}
+         CFLAGS=${URING_CFLAGS}
+         <BINARY_DIR>/configure
   BUILD_COMMAND
-    env
+    ${CMAKE_COMMAND} -E env
       CC=${CMAKE_C_COMPILER}
       CFLAGS=${URING_CFLAGS}
-      make -C <SOURCE_DIR>/src -j liburing.a
+      make -C <BINARY_DIR>/src -j liburing.a
   INSTALL_COMMAND ""
+  BUILD_BYPRODUCTS "<BINARY_DIR>/src/liburing.a"
 )
+
+ExternalProject_Get_Property(liburing_ep BINARY_DIR)
+
+file(MAKE_DIRECTORY "${BINARY_DIR}/src/include")
 
 add_library(uring STATIC IMPORTED GLOBAL)
 add_dependencies(uring liburing_ep)
-
 set_target_properties(uring PROPERTIES
-  IMPORTED_LOCATION "${CMAKE_SOURCE_DIR}/third_party/liburing/src/liburing.a"
-  INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/third_party/liburing/src/include"
+  IMPORTED_LOCATION "${BINARY_DIR}/src/liburing.a"
+  INTERFACE_INCLUDE_DIRECTORIES
+    "${CMAKE_SOURCE_DIR}/third_party/liburing/src/include;$<BUILD_INTERFACE:${BINARY_DIR}/src/include>"
 )
 
 set(RAGEL_PREFIX "${CMAKE_BINARY_DIR}/third_party/ragel")

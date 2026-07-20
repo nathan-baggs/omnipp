@@ -22,10 +22,17 @@ namespace impl
 
 struct OpenAtHandler
 {
-    auto operator()(auto &ev, int fd) const noexcept -> void
+    auto operator()(auto &ev, int fd, bool is_file) const noexcept -> void
     {
-        std::println("openat success: {}", fd);
-        ev.queue_getdents(fd);
+        std::println("openat success: {} {}", fd, is_file);
+        if (is_file)
+        {
+            ev.queue_read(fd);
+        }
+        else
+        {
+            ev.queue_getdents(fd);
+        }
     }
 };
 
@@ -34,11 +41,17 @@ struct GetDentsHandler
     auto operator()([[maybe_unused]] auto &ev, int parent_fd, bool is_file, ::beman::cstring_view path) const noexcept
         -> void
     {
-        std::println("found: {} [is_file: {}]", path, is_file);
-
-        if (!is_file && path != "." && path != "..")
+        if (path != "." && path != "..")
         {
-            ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+            std::println("found: {} [is_file: {}]", path, is_file);
+            if (is_file)
+            {
+                ev.queue_openat(parent_fd, path, O_RDONLY | O_NOFOLLOW);
+            }
+            else
+            {
+                ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+            }
         }
     }
 };
@@ -48,6 +61,14 @@ struct CloseHandler
     auto operator()([[maybe_unused]] auto &ev)
     {
         std::println("close called");
+    }
+};
+
+struct ReadHandler
+{
+    auto operator()([[maybe_unused]] auto &ev, int fd, std::span<const std::byte> data)
+    {
+        std::println("read called {} {}", fd, std::ranges::size(data));
     }
 };
 
@@ -63,7 +84,7 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
     [[maybe_unused]] const auto regex = args[0];
     const auto location = args[1];
 
-    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}};
+    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}, impl::ReadHandler{}};
 
     ev.queue_openat(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
 

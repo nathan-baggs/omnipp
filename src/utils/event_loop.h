@@ -33,13 +33,6 @@ namespace impl
 static constexpr auto queue_size = 4096zu;
 static constexpr auto safe_min = 524'288zu;
 
-enum class Op
-{
-    OPENAT,
-    GETDENTS,
-    CLOSE,
-};
-
 extern "C"
 {
 struct linux_dirent64
@@ -65,14 +58,19 @@ inline auto max_fd() -> std::size_t
 
 }
 
-template <class OpenAtHandler, class GetDentsHandler, class CloseHandler>
+template <class OpenAtHandler, class GetDentsHandler, class CloseHandler, class ReadHandler>
 class EventLoop
 {
   public:
-    EventLoop(OpenAtHandler openat_handler, GetDentsHandler getdents_handler, CloseHandler close_handler)
+    EventLoop(
+        OpenAtHandler openat_handler,
+        GetDentsHandler getdents_handler,
+        CloseHandler close_handler,
+        ReadHandler read_handler)
         : openat_handler_{std::move(openat_handler)}
         , getdents_handler_{std::move(getdents_handler)}
         , close_handler_{std::move(close_handler)}
+        , read_handler_{std::move(read_handler)}
         , ring_{new ::io_uring{}}
         , in_flight_{}
         , request_pool_(impl::queue_size)
@@ -107,7 +105,8 @@ class EventLoop
     auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void //
         pre(parent_fd == AT_FDCWD || static_cast<std::size_t>(parent_fd) < impl::safe_min)
     {
-        auto *req = next_request<impl::Op::OPENAT>(parent_fd, std::string{path.c_str()});
+        auto *req = next_request<impl::Op::OPENAT>(parent_fd, std::string{path.c_str()}, 0zu, !(flags & O_DIRECTORY));
+        std::println("{} {} {} {}", *req->path, req->is_file, flags, flags & O_DIRECTORY);
 
         contract_assert(!!req->path);
         ::io_uring_prep_openat(req->sqe, parent_fd, req->path->c_str(), flags, 0u);
@@ -131,6 +130,12 @@ class EventLoop
         ::io_uring_prep_close(req->sqe, fd);
     }
 
+    auto queue_read(int fd, std::size_t offset = 0zu) noexcept -> void
+    {
+        auto *req = next_request<impl::Op::READ>(fd, std::nullopt, offset);
+        ::io_uring_prep_read(req->sqe, fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer), offset);
+    }
+
     [[nodiscard]] auto pump() noexcept -> std::expected<void, std::string>
     {
         while (in_flight_ > 0)
@@ -147,6 +152,7 @@ class EventLoop
                     const auto read =
                         ::syscall(SYS_getdents64, req.fd, std::ranges::data(req.buffer), std::ranges::size(req.buffer));
 
+                    std::println("fd: {} {}", req.fd, errno);
                     contract_assert(read >= 0);
 
                     if (read == 0)
@@ -221,7 +227,7 @@ class EventLoop
                             }
                         }
 
-                        openat_handler_(*this, res);
+                        openat_handler_(*this, res, req->is_file);
 
                         break;
                     }
@@ -234,6 +240,20 @@ class EventLoop
                     {
                         close_handler_(*this);
                         break;
+                    }
+                    case READ:
+                    {
+                        if (res == 0)
+                        {
+                            queue_close(req->fd);
+                        }
+                        else
+                        {
+                            const auto data = std::span(std::ranges::data(req->buffer), res);
+
+                            read_handler_(*this, req->fd, data);
+                            queue_read(req->fd, req->offset + res);
+                        }
                     }
                 }
 
@@ -254,6 +274,9 @@ class EventLoop
         ::io_uring_sqe *sqe = {};
         std::optional<std::string> path = {};
         int fd = -1;
+        std::size_t offset{};
+        std::vector<std::byte> buffer = std::vector<std::byte>(64zu * 1024zu);
+        bool is_file = false;
     };
 
     struct GetDentsRequest
@@ -267,7 +290,9 @@ class EventLoop
     template <impl::Op O>
     [[nodiscard]] auto next_request(
         int fd = -1,
-        std::optional<std::string> path = std::nullopt) noexcept -> Request * //
+        std::optional<std::string> path = std::nullopt,
+        std::size_t offset = 0zu,
+        bool is_file = false) noexcept -> Request * //
         pre(!request_free_list_.empty())
     {
         auto *sqe = ::io_uring_get_sqe(ring_.get());
@@ -280,6 +305,8 @@ class EventLoop
         next->sqe = sqe;
         next->path = std::move(path);
         next->fd = fd;
+        next->offset = offset;
+        next->is_file = is_file;
 
         io_uring_sqe_set_data(sqe, next);
         ++in_flight_;
@@ -297,6 +324,7 @@ class EventLoop
     OpenAtHandler openat_handler_;
     GetDentsHandler getdents_handler_;
     CloseHandler close_handler_;
+    ReadHandler read_handler_;
     std::unique_ptr<::io_uring, decltype(ring_free)> ring_;
     std::size_t in_flight_;
     std::vector<Request> request_pool_;

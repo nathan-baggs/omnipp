@@ -107,10 +107,6 @@ class EventLoop
         ::io_uring_prep_openat(req->sqe, parent_fd, req->path.c_str(), flags, 0u);
     }
 
-    auto handle_fd(int fd) -> void pre(fd >= 0)
-    {
-    }
-
     auto queue_getdents(int fd) noexcept -> void
     {
         getdents_queue_.push_back({fd});
@@ -137,22 +133,27 @@ class EventLoop
             auto current_getdents_queue = std::vector<GetDentsRequest>{};
             std::ranges::swap(current_getdents_queue, getdents_queue_);
 
+            static auto getdent_buffer = std::vector<std::byte>(32zu * 1024zu);
+
             for (const auto &req : current_getdents_queue)
             {
                 for (;;)
                 {
-                    const auto read =
-                        ::syscall(SYS_getdents64, req.fd, std::ranges::data(req.buffer), std::ranges::size(req.buffer));
+                    const auto read = ::syscall(
+                        SYS_getdents64, req.fd, std::ranges::data(getdent_buffer), std::ranges::size(getdent_buffer));
 
-                    std::println("fd: {} {}", req.fd, errno);
-                    contract_assert(read >= 0);
+                    if (read < 0)
+                    {
+                        std::println("fd: {} {}", req.fd, errno);
+                        break;
+                    }
 
                     if (read == 0)
                     {
                         break;
                     }
 
-                    auto res_span = std::span(std::ranges::data(req.buffer), read);
+                    auto res_span = std::span(std::ranges::data(getdent_buffer), read);
 
                     while (!std::ranges::empty(res_span))
                     {
@@ -167,10 +168,9 @@ class EventLoop
 
                         res_span = res_span.subspan(dir->d_reclen);
                     }
-
-                    queue_close(req.fd);
                 }
 
+                queue_close(req.fd);
                 --in_flight_;
             }
 
@@ -193,8 +193,10 @@ class EventLoop
                 contract_assert(base_req != nullptr);
 
                 const auto res = cqe->res;
-                std::println("{} {}", -res, std::to_underlying(base_req->op));
-                contract_assert(res >= 0);
+                if (res < 0)
+                {
+                    std::println("{} {}", -res, std::to_underlying(base_req->op));
+                }
 
                 switch (base_req->op)
                 {
@@ -236,6 +238,7 @@ class EventLoop
                         }
 
                         read_request_pool_.free(req);
+                        break;
                     }
                 }
 
@@ -252,10 +255,13 @@ class EventLoop
     struct GetDentsRequest
     {
         int fd = -1;
-        std::vector<std::byte> buffer = std::vector<std::byte>(32zu * 1024zu);
     };
 
-    inline static const auto ring_free = [](auto *r) { ::io_uring_queue_exit(r); };
+    inline static const auto ring_free = [](auto *r)
+    {
+        ::io_uring_queue_exit(r);
+        delete r;
+    };
 
     OpenAtHandler openat_handler_;
     GetDentsHandler getdents_handler_;

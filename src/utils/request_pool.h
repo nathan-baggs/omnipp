@@ -70,7 +70,7 @@ class RequestPool
     constexpr RequestPool(const RequestPool &) = delete;
     constexpr auto operator=(const RequestPool &) -> RequestPool & = delete;
     constexpr RequestPool(RequestPool &&) = default;
-    constexpr auto operator=(RequestPool &&) -> RequestPool & = default;
+    constexpr auto operator=(RequestPool &&) -> RequestPool & = delete;
 
     constexpr auto empty() const -> bool;
 

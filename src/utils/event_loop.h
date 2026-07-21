@@ -79,7 +79,6 @@ class EventLoop
         , close_request_pool_{ring_.get(), in_flight_}
         , read_request_pool_{ring_.get(), in_flight_}
         , getdents_queue_{}
-        , close_queue_(impl::max_fd())
     {
         if (::io_uring_queue_init(impl::queue_size, ring_.get(), 0) != 0)
         {
@@ -106,11 +105,6 @@ class EventLoop
         auto *req = openat_request_pool_.next(parent_fd, path.c_str(), !(flags & O_DIRECTORY));
 
         ::io_uring_prep_openat(req->sqe, parent_fd, req->path.c_str(), flags, 0u);
-
-        if (parent_fd != AT_FDCWD)
-        {
-            ++close_queue_[parent_fd];
-        }
     }
 
     auto handle_fd(int fd) -> void pre(fd >= 0)
@@ -145,8 +139,6 @@ class EventLoop
 
             for (const auto &req : current_getdents_queue)
             {
-                ++close_queue_[req.fd];
-
                 for (;;)
                 {
                     const auto read =
@@ -175,10 +167,7 @@ class EventLoop
 
                         res_span = res_span.subspan(dir->d_reclen);
                     }
-                }
 
-                if (--close_queue_[req.fd] == 0)
-                {
                     queue_close(req.fd);
                 }
 
@@ -217,14 +206,6 @@ class EventLoop
 
                         if (res >= 0)
                         {
-                            if (req->fd != AT_FDCWD)
-                            {
-                                if (--close_queue_[req->fd] == 0)
-                                {
-                                    queue_close(req->fd);
-                                }
-                            }
-
                             openat_handler_(*this, res, req->is_file);
                         }
 
@@ -286,6 +267,5 @@ class EventLoop
     RequestPool<Op::CLOSE, CloseRequest, impl::queue_size> close_request_pool_;
     RequestPool<Op::READ, ReadRequest, impl::queue_size> read_request_pool_;
     std::vector<GetDentsRequest> getdents_queue_;
-    std::vector<std::uint32_t> close_queue_;
 };
 }

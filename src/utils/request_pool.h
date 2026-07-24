@@ -30,9 +30,12 @@ struct OpenAtRequest : BaseRequest
         this->path = std::move(path);
         this->fd = fd;
         this->flags = flags;
-        this->is_file = !(this->flags & O_DIRECTORY);
+        this->is_file = !(flags & O_DIRECTORY);
+    }
 
-        ::io_uring_prep_openat(sqe, this->fd, this->path.c_str(), this->flags, 0u);
+    auto prep() -> void
+    {
+        ::io_uring_prep_openat(sqe, fd, path.c_str(), flags, 0u);
     }
 
     std::string path;
@@ -46,8 +49,11 @@ struct CloseRequest : BaseRequest
     auto reset(int fd) -> void
     {
         this->fd = fd;
+    }
 
-        ::io_uring_prep_close(sqe, this->fd);
+    auto prep() -> void
+    {
+        ::io_uring_prep_close(sqe, fd);
     }
 
     int fd = -1;
@@ -59,8 +65,11 @@ struct ReadRequest : BaseRequest
     {
         this->fd = fd;
         this->offset = offset;
+    }
 
-        ::io_uring_prep_read(sqe, fd, std::ranges::data(this->buffer), std::ranges::size(this->buffer), this->offset);
+    auto prep() -> void
+    {
+        ::io_uring_prep_read(sqe, fd, std::ranges::data(buffer), std::ranges::size(buffer), offset);
     }
 
     int fd = -1;
@@ -132,6 +141,7 @@ auto RequestPool<O, T, N>::next(Args &&...args) -> T *
     next->sqe = sqe;
 
     next->reset(std::forward<Args>(args)...);
+    next->prep();
 
     ::io_uring_sqe_set_data(sqe, next);
     ++in_flight_;

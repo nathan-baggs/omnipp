@@ -102,9 +102,7 @@ class EventLoop
     auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void //
         pre(parent_fd == AT_FDCWD || static_cast<std::size_t>(parent_fd) < impl::safe_min)
     {
-        auto *req = openat_request_pool_.next(parent_fd, path.c_str(), !(flags & O_DIRECTORY));
-
-        ::io_uring_prep_openat(req->sqe, parent_fd, req->path.c_str(), flags, 0u);
+        openat_request_pool_.next(parent_fd, path.c_str(), flags);
     }
 
     auto queue_getdents(int fd) noexcept -> void
@@ -115,15 +113,12 @@ class EventLoop
 
     auto queue_close(int fd) noexcept -> void
     {
-        auto *req = close_request_pool_.next(int{});
-
-        ::io_uring_prep_close(req->sqe, fd);
+        close_request_pool_.next(fd);
     }
 
     auto queue_read(int fd, std::size_t offset = 0zu) noexcept -> void
     {
-        auto *req = read_request_pool_.next(fd, offset);
-        ::io_uring_prep_read(req->sqe, fd, std::ranges::data(req->buffer), std::ranges::size(req->buffer), offset);
+        read_request_pool_.next(fd, offset);
     }
 
     [[nodiscard]] auto pump() noexcept -> std::expected<void, std::string>

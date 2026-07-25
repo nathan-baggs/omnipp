@@ -1,5 +1,6 @@
 #pragma once
 
+#include <deque>
 #include <inplace_vector>
 #include <ranges>
 #include <type_traits>
@@ -94,8 +95,10 @@ class RequestPool
 
     constexpr auto empty() const -> bool;
 
+    auto try_pop_overflow() -> bool;
+
     template <class... Args>
-    auto next(Args &&...args) -> T *;
+    auto next(Args &&...args) -> void;
 
     auto free(T *req) noexcept -> void //
         pre(std::ranges::size(free_list_) != N);
@@ -105,6 +108,9 @@ class RequestPool
     std::vector<T> pool_;
     std::inplace_vector<T *, N> free_list_;
     std::size_t &in_flight_;
+    std::deque<T *> sqe_overflow_;
+    std::deque<T> pool_overflow_;
+    std::vector<T *> pool_overflow_free_list_;
 };
 
 template <Op O, IsRequest T, std::size_t N>
@@ -113,46 +119,109 @@ constexpr RequestPool<O, T, N>::RequestPool(::io_uring *ring, std::size_t &in_fl
     , pool_{N}
     , free_list_{}
     , in_flight_{in_flight}
+    , sqe_overflow_{}
+    , pool_overflow_{}
+    , pool_overflow_free_list_{}
 {
-    free_list_ = pool_ | std::views::transform([](auto &e) { return std::addressof(e); }) |
+    free_list_ = pool_ |
+                 std::views::transform(
+                     [](auto &e)
+                     {
+                         e.op = O;
+                         return std::addressof(e);
+                     }) |
                  std::ranges::to<std::inplace_vector<T *, N>>();
+
+    pool_overflow_free_list_.reserve(N);
 }
 
 template <Op O, IsRequest T, std::size_t N>
 constexpr auto RequestPool<O, T, N>::empty() const -> bool
 {
-    return free_list_.empty();
+    return std::ranges::empty(free_list_);
 }
 
 template <Op O, IsRequest T, std::size_t N>
-template <class... Args>
-auto RequestPool<O, T, N>::next(Args &&...args) -> T *
+auto RequestPool<O, T, N>::try_pop_overflow() -> bool
 {
-    // this should be a pre-condition but it crashes gcc when you have an empty variadic with a pre-condition
-    contract_assert(!empty());
+    if (std::ranges::empty(sqe_overflow_))
+    {
+        return false;
+    }
 
     auto *sqe = ::io_uring_get_sqe(ring_);
-    contract_assert(sqe != nullptr);
+    if (sqe == nullptr)
+    {
+        return false;
+    }
 
-    auto *next = free_list_.back();
-    free_list_.pop_back();
-
-    next->op = O;
+    auto *next = sqe_overflow_.front();
+    sqe_overflow_.pop_front();
     next->sqe = sqe;
-
-    next->reset(std::forward<Args>(args)...);
     next->prep();
 
     ::io_uring_sqe_set_data(sqe, next);
     ++in_flight_;
 
-    return next;
+    return true;
+}
+
+template <Op O, IsRequest T, std::size_t N>
+template <class... Args>
+auto RequestPool<O, T, N>::next(Args &&...args) -> void
+{
+    T *next = nullptr;
+
+    if (!std::ranges::empty(free_list_))
+    {
+        next = free_list_.back();
+        free_list_.pop_back();
+    }
+    else if (!std::ranges::empty(pool_overflow_free_list_))
+    {
+        next = pool_overflow_free_list_.back();
+        pool_overflow_free_list_.pop_back();
+    }
+    else
+    {
+        pool_overflow_.push_back({});
+        auto &req = pool_overflow_.back();
+        req.op = O;
+        next = std::addressof(req);
+    }
+
+    next->reset(std::forward<Args>(args)...);
+
+    auto *sqe = ::io_uring_get_sqe(ring_);
+    if (sqe == nullptr)
+    {
+        sqe_overflow_.push_back(next);
+    }
+    else
+    {
+        next->sqe = sqe;
+        next->prep();
+
+        ::io_uring_sqe_set_data(sqe, next);
+        ++in_flight_;
+    }
 }
 
 template <Op O, IsRequest T, std::size_t N>
 auto RequestPool<O, T, N>::free(T *req) noexcept -> void
 {
-    free_list_.unchecked_push_back(req);
+    const auto *pool_start = std::ranges::data(pool_);
+    const auto *pool_end = pool_start + N;
+
+    if (req >= pool_start && req < pool_end)
+    {
+        free_list_.unchecked_push_back(req);
+    }
+    else
+    {
+        pool_overflow_free_list_.push_back(req);
+    }
+
     --in_flight_;
 }
 

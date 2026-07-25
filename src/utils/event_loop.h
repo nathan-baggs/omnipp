@@ -108,7 +108,6 @@ class EventLoop
     auto queue_getdents(int fd) noexcept -> void
     {
         getdents_queue_.push_back({fd});
-        ++in_flight_;
     }
 
     auto queue_close(int fd) noexcept -> void
@@ -123,7 +122,7 @@ class EventLoop
 
     [[nodiscard]] auto pump() noexcept -> std::expected<void, std::string>
     {
-        while (in_flight_ > 0)
+        for (;;)
         {
             auto current_getdents_queue = std::vector<GetDentsRequest>{};
             std::ranges::swap(current_getdents_queue, getdents_queue_);
@@ -166,7 +165,19 @@ class EventLoop
                 }
 
                 queue_close(req.fd);
-                --in_flight_;
+            }
+
+            auto check_overflow = false;
+            do
+            {
+                check_overflow = openat_request_pool_.try_pop_overflow() || close_request_pool_.try_pop_overflow() ||
+                                 read_request_pool_.try_pop_overflow();
+
+            } while (check_overflow);
+
+            if (in_flight_ == 0)
+            {
+                break;
             }
 
             ::io_uring_cqe *cqe = {};

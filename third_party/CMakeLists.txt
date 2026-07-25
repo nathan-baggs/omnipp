@@ -59,34 +59,24 @@ set(RAGEL_CXXFLAGS "-static -march=native -ggdb")
 set(RAGEL_LDFLAGS "-static")
 
 ExternalProject_Add(ragel_ep
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/ragel"
+  SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/colm-suite"
   BUILD_IN_SOURCE 1
 
+  UPDATE_COMMAND <SOURCE_DIR>/autogen.sh
+
   CONFIGURE_COMMAND
-    find <SOURCE_DIR> -name config.h.in -o -name aclocal.m4 -o -name configure -o -name Makefile.in -o -name stamp-h1 | xargs touch &&
-
-    env
+    <SOURCE_DIR>/configure 
+      --prefix=${RAGEL_PREFIX}
+      --host=x86_64-linux-musl
+      --disable-manual
       CC=${CMAKE_C_COMPILER}
       CXX=${CMAKE_CXX_COMPILER}
       CFLAGS=${RAGEL_CFLAGS}
       CXXFLAGS=${RAGEL_CXXFLAGS}
       LDFLAGS=${RAGEL_LDFLAGS}
-      <SOURCE_DIR>/configure --prefix=${RAGEL_PREFIX}
 
-  BUILD_COMMAND
-    env
-      CC=${CMAKE_C_COMPILER}
-      CXX=${CMAKE_CXX_COMPILER}
-      CFLAGS=${RAGEL_CFLAGS}
-      CXXFLAGS=${RAGEL_CXXFLAGS}
-      LDFLAGS=${RAGEL_LDFLAGS}
-      make -j
-
-  INSTALL_COMMAND
-    env
-      CC=${CMAKE_C_COMPILER}
-      CXX=${CMAKE_CXX_COMPILER}
-      make install
+  BUILD_COMMAND make -j
+  INSTALL_COMMAND make install
 )
 
 set(RAGEL_EXECUTABLE "${RAGEL_BIN}" CACHE FILEPATH "Vendored ragel executable" FORCE)

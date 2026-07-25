@@ -152,3 +152,10 @@ RUN set -ex \
     && tree-sitter --version
 
 RUN mkdir -p /ccache && chmod 1777 /ccache
+
+RUN apt-get update && apt-get install -y \
+    autoconf \
+    automake \
+    libtool \
+    ragel \
+    kelbt

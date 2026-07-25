@@ -52,38 +52,9 @@ set_target_properties(uring PROPERTIES
     "${CMAKE_SOURCE_DIR}/third_party/liburing/src/include;$<BUILD_INTERFACE:${BINARY_DIR}/src/include>"
 )
 
-set(RAGEL_PREFIX "${CMAKE_BINARY_DIR}/third_party/ragel")
-set(RAGEL_BIN "${RAGEL_PREFIX}/bin/ragel")
-set(RAGEL_CFLAGS "-static -march=native -ggdb")
-set(RAGEL_CXXFLAGS "-static -march=native -ggdb")
-set(RAGEL_LDFLAGS "-static")
-
-ExternalProject_Add(ragel_ep
-  SOURCE_DIR "${CMAKE_SOURCE_DIR}/third_party/colm-suite"
-  BUILD_IN_SOURCE 1
-
-  UPDATE_COMMAND <SOURCE_DIR>/autogen.sh
-
-  CONFIGURE_COMMAND
-    <SOURCE_DIR>/configure 
-      --prefix=${RAGEL_PREFIX}
-      --host=x86_64-linux-musl
-      --disable-manual
-      CC=${CMAKE_C_COMPILER}
-      CXX=${CMAKE_CXX_COMPILER}
-      CFLAGS=${RAGEL_CFLAGS}
-      CXXFLAGS=${RAGEL_CXXFLAGS}
-      LDFLAGS=${RAGEL_LDFLAGS}
-
-  BUILD_COMMAND make -j
-  INSTALL_COMMAND make install
-)
-
-set(RAGEL_EXECUTABLE "${RAGEL_BIN}" CACHE FILEPATH "Vendored ragel executable" FORCE)
-set(RAGEL "${RAGEL_BIN}" CACHE FILEPATH "Vendored ragel executable" FORCE)
-
 set(Boost_ROOT "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "" FORCE)
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "" FORCE)
 set(BOOST_INCLUDEDIR "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "" FORCE)
+set(FAT_RUNTIME OFF CACHE BOOL "Disable Vectorscan Fat Runtime" FORCE)
+set(BUILD_NATIVE ON CACHE BOOL "Tell Vectorscan to optimize natively" FORCE)
 add_subdirectory(vectorscan EXCLUDE_FROM_ALL)
-target_compile_options(hs_exec_simde PRIVATE -march=x86-64)

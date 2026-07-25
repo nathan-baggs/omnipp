@@ -12,6 +12,9 @@
 #include <beman/cstring_view/cstring_view.hpp>
 
 #include "config.h"
+#include "pipeline/pipeline.h"
+#include "sink/write.h"
+#include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
 
 namespace om
@@ -66,10 +69,14 @@ struct CloseHandler
 
 struct ReadHandler
 {
-    auto operator()([[maybe_unused]] auto &ev, int fd, std::span<const std::byte> data)
+    auto operator()(auto &, int, std::span<const std::byte> data)
     {
-        std::println("read called {} {}", fd, std::ranges::size(data));
+        static const auto pipeline = transform::VectorScan{regex} | sink::Write{};
+
+        execute(pipeline, data);
     }
+
+    ::beman::cstring_view regex;
 };
 
 }
@@ -81,10 +88,10 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
         throw std::runtime_error("expected args: [regex, location]");
     }
 
-    [[maybe_unused]] const auto regex = args[0];
+    const auto regex = args[0];
     const auto location = args[1];
 
-    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}, impl::ReadHandler{}};
+    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}, impl::ReadHandler{regex}};
 
     ev.queue_openat(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
 

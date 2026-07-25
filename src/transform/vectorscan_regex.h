@@ -4,6 +4,7 @@
 #include <exception>
 #include <expected>
 #include <memory>
+#include <print>
 #include <span>
 #include <string>
 
@@ -75,7 +76,7 @@ struct VectorScanState
             const auto res = ::hs_alloc_scratch(db.get(), std::inout_ptr(scratch));
             if (res != HS_SUCCESS)
             {
-                throw std::runtime_error("failed to create scratch space");
+                throw std::runtime_error(std::format("failed to create scratch space: {}", res));
             }
         }
     }

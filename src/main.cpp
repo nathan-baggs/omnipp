@@ -8,6 +8,8 @@
 #include <tuple>
 #include <vector>
 
+#include <sys/resource.h>
+
 #include <beman/cstring_view/cstring_view.hpp>
 
 #include "commands/cat.h"
@@ -41,12 +43,28 @@ constexpr auto convert_raw_args(const int argc, char **argv) noexcept
     return std::make_tuple(exe_trunk(all_argv[0]), all_argv | std::views::drop(1zu) | std::ranges::to<std::vector>());
 }
 
+auto set_rlimit() -> void
+{
+    auto rl = rlimit{};
+    if (::getrlimit(RLIMIT_NOFILE, &rl) == 0)
+    {
+        auto target = ::rlim_t{4096};
+        if (rl.rlim_cur < target)
+        {
+            rl.rlim_cur = target;
+            ::setrlimit(RLIMIT_NOFILE, &rl);
+        }
+    }
+}
+
 }
 
 auto main(int argc, char **argv) -> int
 {
     try
     {
+        set_rlimit();
+
         const auto [name, args] = convert_raw_args(argc, argv);
         const auto config = om::load_config();
 

@@ -27,7 +27,6 @@ struct OpenAtHandler
 {
     auto operator()(auto &ev, int fd, bool is_file) const noexcept -> void
     {
-        std::println("openat success: {} {}", fd, is_file);
         if (is_file)
         {
             ev.queue_read(fd);
@@ -41,12 +40,10 @@ struct OpenAtHandler
 
 struct GetDentsHandler
 {
-    auto operator()([[maybe_unused]] auto &ev, int parent_fd, bool is_file, ::beman::cstring_view path) const noexcept
-        -> void
+    auto operator()(auto &ev, int parent_fd, bool is_file, ::beman::cstring_view path) const noexcept -> void
     {
         if (path != "." && path != "..")
         {
-            std::println("found: {} [is_file: {}]", path, is_file);
             if (is_file)
             {
                 ev.queue_openat(parent_fd, path, O_RDONLY | O_NOFOLLOW);
@@ -61,9 +58,8 @@ struct GetDentsHandler
 
 struct CloseHandler
 {
-    auto operator()([[maybe_unused]] auto &ev)
+    auto operator()(auto &)
     {
-        std::println("close called");
     }
 };
 

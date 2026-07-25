@@ -93,15 +93,12 @@ class RequestPool
     constexpr RequestPool(RequestPool &&) = default;
     constexpr auto operator=(RequestPool &&) -> RequestPool & = delete;
 
-    constexpr auto empty() const -> bool;
-
     auto try_pop_overflow() -> bool;
 
     template <class... Args>
     auto next(Args &&...args) -> void;
 
-    auto free(T *req) noexcept -> void //
-        pre(std::ranges::size(free_list_) != N);
+    auto free(T *req) noexcept -> void;
 
   private:
     ::io_uring *ring_;
@@ -133,12 +130,6 @@ constexpr RequestPool<O, T, N>::RequestPool(::io_uring *ring, std::size_t &in_fl
                  std::ranges::to<std::inplace_vector<T *, N>>();
 
     pool_overflow_free_list_.reserve(N);
-}
-
-template <Op O, IsRequest T, std::size_t N>
-constexpr auto RequestPool<O, T, N>::empty() const -> bool
-{
-    return std::ranges::empty(free_list_);
 }
 
 template <Op O, IsRequest T, std::size_t N>

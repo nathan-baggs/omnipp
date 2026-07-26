@@ -199,11 +199,6 @@ class EventLoop
 
             } while (check_overflow);
 
-            if (in_flight_ == 0)
-            {
-                break;
-            }
-
             auto read_free_queue = std::vector<ReadRequest *>{};
 
             {
@@ -214,6 +209,11 @@ class EventLoop
             for (auto *req : read_free_queue)
             {
                 read_request_pool_.free(req);
+            }
+
+            if (in_flight_ == 0)
+            {
+                break;
             }
 
             const auto res = ::io_uring_submit(ring_.get());

@@ -68,7 +68,6 @@ struct ReadRequest : BaseRequest
     {
         this->fd = fd;
         this->offset = offset;
-        this->buffer = std::vector<std::byte>(64zu * 1024zu);
     }
 
     auto prep() -> void

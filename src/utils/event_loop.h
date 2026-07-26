@@ -259,9 +259,10 @@ class EventLoop
                         }
                         else if (res > 0)
                         {
-                            req->buffer.resize(res);
+                            const auto *begin_buffer = std::ranges::data(req->buffer);
+                            const auto *end_buffer = begin_buffer + res;
 
-                            if (const auto r = read_handler_(*this, req->fd, std::move(req->buffer)); !r)
+                            if (const auto r = read_handler_(*this, req->fd, std::vector(begin_buffer, end_buffer)); !r)
                             {
                                 return std::unexpected(r.error());
                             }

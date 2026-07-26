@@ -31,7 +31,7 @@ add_executable(omnipp main.cpp)
 target_compile_options(omnipp PRIVATE -ggdb)
 
 target_link_libraries(omnipp PRIVATE omnipp_lib)
-target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers hs omnipp_global_flags uring)
+target_link_libraries(omnipp PRIVATE stdc++exp beman::cstring_view tree-sitter tree_sitter_parsers hs omnipp_global_flags uring mimalloc-static)
 target_compile_features(omnipp PRIVATE cxx_std_26)
 target_include_directories(omnipp PRIVATE
     ${CMAKE_SOURCE_DIR}/src

@@ -58,3 +58,5 @@ set(BOOST_INCLUDEDIR "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE 
 set(FAT_RUNTIME OFF CACHE BOOL "Disable Vectorscan Fat Runtime" FORCE)
 set(BUILD_NATIVE ON CACHE BOOL "Tell Vectorscan to optimize natively" FORCE)
 add_subdirectory(vectorscan EXCLUDE_FROM_ALL)
+
+add_subdirectory(mimalloc EXCLUDE_FROM_ALL)

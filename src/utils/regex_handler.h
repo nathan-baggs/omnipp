@@ -1,6 +1,5 @@
 #pragma once
 
-#include "hs_runtime.h"
 #include <atomic>
 #include <condition_variable>
 #include <cstddef>
@@ -17,6 +16,8 @@
 
 #include <beman/cstring_view/cstring_view.hpp>
 #include <hs.h>
+
+#include "utils/request_pool.h"
 
 using namespace std::literals;
 
@@ -111,7 +112,7 @@ struct RegexHandler
 
         while (running)
         {
-            auto data = std::vector<std::byte>{};
+            ReadRequest *req{};
 
             {
                 auto lock = std::unique_lock(mutex);
@@ -122,17 +123,17 @@ struct RegexHandler
                     break;
                 }
 
-                data = std::move(to_process.front());
+                req = std::move(to_process.front());
                 to_process.pop_front();
             }
 
-            contract_assert(!std::ranges::empty(data));
+            contract_assert(req);
 
-            const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
+            const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(req->buffer));
 
             ctx.matches.clear();
-            const auto res =
-                ::hs_scan(db.get(), data_str, std::ranges::size(data), 0, local_scratch.get(), impl::on_match, &ctx);
+            const auto res = ::hs_scan(
+                db.get(), data_str, std::ranges::size(req->buffer), 0, local_scratch.get(), impl::on_match, &ctx);
 
             if (res != HS_SUCCESS)
             {
@@ -157,6 +158,8 @@ struct RegexHandler
                     write_buffer.clear();
                 }
             }
+
+            ev.free_read_request(req);
         }
 
         if (!std::ranges::empty(write_buffer))
@@ -166,10 +169,10 @@ struct RegexHandler
         }
     }
 
-    auto operator()(std::vector<std::byte> data) -> std::expected<std::size_t, std::string>
+    auto operator()(ReadRequest *req) -> std::expected<std::size_t, std::string>
     {
         auto lock = std::unique_lock(mutex);
-        to_process.push_back(std::move(data));
+        to_process.push_back(req);
 
         cv.notify_one();
 
@@ -182,7 +185,7 @@ struct RegexHandler
     EV &ev;
     std::unique_ptr<::hs_database_t, decltype(hs_database_free)> db;
     std::unique_ptr<::hs_scratch_t, decltype(hs_scratch_free)> scratch;
-    std::deque<std::vector<std::byte>> to_process;
+    std::deque<ReadRequest *> to_process;
     std::mutex mutex;
     std::mutex write_mutex;
     std::condition_variable cv;

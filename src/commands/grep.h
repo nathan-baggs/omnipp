@@ -17,6 +17,7 @@
 #include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
 #include "utils/regex_handler.h"
+#include "utils/request_pool.h"
 
 namespace om
 {
@@ -67,11 +68,11 @@ struct CloseHandler
 struct ReadHandler
 {
     template <class EV>
-    auto operator()(EV &ev, int, std::vector<std::byte> data) -> std::expected<void, std::string>
+    auto operator()(EV &ev, ReadRequest *req) -> std::expected<void, std::string>
     {
         static auto regex_handler = RegexHandler<EV>{ev, regex};
 
-        const auto res = regex_handler(std::move(data));
+        const auto res = regex_handler(req);
         if (!res)
         {
             return std::unexpected(res.error());

@@ -6,6 +6,7 @@
 #include <expected>
 #include <inplace_vector>
 #include <memory>
+#include <mutex>
 #include <ranges>
 #include <stdexcept>
 #include <string>
@@ -135,6 +136,12 @@ class EventLoop
         write_request_pool_.next(fd, std::move(buffer), offset);
     }
 
+    auto free_read_request(ReadRequest *req) -> void
+    {
+        auto lock = std::unique_lock(read_free_queue_mutex_);
+        read_free_queue_.push_back(req);
+    }
+
     [[nodiscard]] auto pump() noexcept -> std::expected<void, std::string>
     {
         for (;;)
@@ -197,6 +204,18 @@ class EventLoop
                 break;
             }
 
+            auto read_free_queue = std::vector<ReadRequest *>{};
+
+            {
+                auto lock = std::unique_lock(read_free_queue_mutex_);
+                std::ranges::swap(read_free_queue, read_free_queue_);
+            }
+
+            for (auto *req : read_free_queue)
+            {
+                read_request_pool_.free(req);
+            }
+
             const auto res = ::io_uring_submit(ring_.get());
             if (res < 0)
             {
@@ -257,14 +276,12 @@ class EventLoop
 
                         if (res == 0)
                         {
+                            free_read_request(req);
                             queue_close(req->fd);
                         }
                         else if (res > 0)
                         {
-                            const auto *begin_buffer = std::ranges::data(req->buffer);
-                            const auto *end_buffer = begin_buffer + res;
-
-                            if (const auto r = read_handler_(*this, req->fd, std::vector(begin_buffer, end_buffer)); !r)
+                            if (const auto r = read_handler_(*this, req); !r)
                             {
                                 return std::unexpected(r.error());
                             }
@@ -272,7 +289,6 @@ class EventLoop
                             queue_read(req->fd, req->offset + res);
                         }
 
-                        read_request_pool_.free(req);
                         break;
                     }
                     case WRITE:
@@ -348,5 +364,7 @@ class EventLoop
     RequestPool<Op::WRITE, WriteRequest, impl::queue_size> write_request_pool_;
     std::vector<GetDentsRequest> getdents_queue_;
     std::unordered_map<int, std::size_t> dir_ref_count_;
+    std::vector<ReadRequest *> read_free_queue_;
+    std::mutex read_free_queue_mutex_;
 };
 }

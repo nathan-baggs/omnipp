@@ -48,11 +48,14 @@ auto set_rlimit() -> void
     auto rl = rlimit{};
     if (::getrlimit(RLIMIT_NOFILE, &rl) == 0)
     {
-        auto target = ::rlim_t{4096};
+        auto target = ::rlim_t{524'288};
         if (rl.rlim_cur < target)
         {
             rl.rlim_cur = target;
-            ::setrlimit(RLIMIT_NOFILE, &rl);
+            if (::setrlimit(RLIMIT_NOFILE, &rl) != 0)
+            {
+                throw std::runtime_error("failed to set rlimit");
+            }
         }
     }
 }

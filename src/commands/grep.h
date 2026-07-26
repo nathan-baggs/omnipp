@@ -67,11 +67,17 @@ struct CloseHandler
 struct ReadHandler
 {
     template <class EV>
-    auto operator()(EV &ev, int, std::vector<std::byte> data)
+    auto operator()(EV &ev, int, std::vector<std::byte> data) -> std::expected<void, std::string>
     {
         static auto regex_handler = RegexHandler<EV>{ev, regex};
 
-        [[maybe_unused]] auto res = regex_handler(std::move(data));
+        const auto res = regex_handler(std::move(data));
+        if (!res)
+        {
+            return std::unexpected(res.error());
+        }
+
+        return {};
     }
 
     ::beman::cstring_view regex;

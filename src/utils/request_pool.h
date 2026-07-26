@@ -91,7 +91,7 @@ struct WriteRequest : BaseRequest
 
     auto prep() -> void
     {
-        ::io_uring_prep_write(sqe, fd, std::ranges::data(buffer), std::ranges::size(buffer), offset);
+        ::io_uring_prep_write(sqe, fd, std::ranges::data(buffer) + offset, std::ranges::size(buffer), -1);
     }
 
     int fd = -1;

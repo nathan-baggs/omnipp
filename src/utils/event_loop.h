@@ -154,7 +154,7 @@ class EventLoop
 
                     if (read < 0)
                     {
-                        std::println("fd: {} {}", req.fd, errno);
+                        std::println(std::cerr, "fd: {} {}", req.fd, errno);
                         break;
                     }
 
@@ -217,7 +217,7 @@ class EventLoop
                 const auto res = cqe->res;
                 if (res < 0)
                 {
-                    std::println("{} {}", -res, std::to_underlying(base_req->op));
+                    std::println(std::cerr, "{} {}", -res, std::to_underlying(base_req->op));
                 }
 
                 switch (base_req->op)
@@ -259,7 +259,12 @@ class EventLoop
                         else if (res > 0)
                         {
                             req->buffer.resize(res);
-                            read_handler_(*this, req->fd, std::move(req->buffer));
+
+                            if (const auto r = read_handler_(*this, req->fd, std::move(req->buffer)); !r)
+                            {
+                                return std::unexpected(r.error());
+                            }
+
                             queue_read(req->fd, req->offset + res);
                         }
 

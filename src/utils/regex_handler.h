@@ -1,10 +1,16 @@
 #pragma once
 
+#include "hs_runtime.h"
+#include <atomic>
+#include <condition_variable>
 #include <cstddef>
+#include <deque>
 #include <expected>
 #include <memory>
+#include <mutex>
 #include <ranges>
 #include <span>
+#include <thread>
 #include <vector>
 
 #include <unistd.h>
@@ -47,6 +53,11 @@ struct RegexHandler
         : ev{ev}
         , db{}
         , scratch{}
+        , to_process{}
+        , mutex{}
+        , write_mutex{}
+        , cv{}
+        , running{true}
     {
         {
             static const auto hs_compiler_error_free = [](::hs_compile_error_t *err) { ::hs_free_compile_error(err); };
@@ -73,22 +84,57 @@ struct RegexHandler
                 throw std::runtime_error(std::format("failed to create scratch space: {}", res));
             }
         }
+
+        for (auto i = 0zu; i < std::max(std::jthread::hardware_concurrency() - 1zu, 4zu); ++i)
+        {
+            workers.emplace_back([this] { worker(); });
+        }
     }
 
-    auto operator()(std::vector<std::byte> data) -> std::expected<std::size_t, std::string>
+    ~RegexHandler()
     {
-        const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
+        running = false;
+        cv.notify_all();
+    }
 
-        try
+    auto worker() -> void
+    {
+        auto local_scratch = std::unique_ptr<::hs_scratch_t, decltype(hs_scratch_free)>{};
+        const auto scratch_res = ::hs_clone_scratch(scratch.get(), std::inout_ptr(local_scratch));
+        if (scratch_res != HS_SUCCESS)
         {
+            throw std::runtime_error(std::format("failed to create local cratch space: {}", scratch_res));
+        }
+
+        while (running)
+        {
+            auto data = std::vector<std::byte>{};
+
+            {
+                auto lock = std::unique_lock(mutex);
+                cv.wait(lock, [this] { return !running || !std::ranges::empty(to_process); });
+
+                if (!running)
+                {
+                    break;
+                }
+
+                data = std::move(to_process.front());
+                to_process.pop_front();
+            }
+
+            contract_assert(!std::ranges::empty(data));
+
+            const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
+
             auto ctx = impl::Context{};
 
             const auto res =
-                ::hs_scan(db.get(), data_str, std::ranges::size(data), 0, scratch.get(), impl::on_match, &ctx);
+                ::hs_scan(db.get(), data_str, std::ranges::size(data), 0, local_scratch.get(), impl::on_match, &ctx);
 
             if (res != HS_SUCCESS)
             {
-                return std::unexpected("failed to parse input");
+                throw std::runtime_error("failed to parse input");
             }
 
             for (const auto &[begin, end] : ctx.matches)
@@ -99,22 +145,25 @@ struct RegexHandler
                     line.remove_prefix(1zu);
                 }
 
-                auto line_str = std::string{line};
-                line_str += '\n';
+                {
+                    auto lock = std::unique_lock{write_mutex};
+                    ::write(STDOUT_FILENO, std::ranges::data(line), std::ranges::size(line));
 
-                ev.queue_write(STDOUT_FILENO, std::move(line_str));
+                    static const auto new_line = '\n';
+                    ::write(STDOUT_FILENO, &new_line, 1);
+                }
             }
+        }
+    }
 
-            return std::ranges::size(ctx.matches);
-        }
-        catch (const std::exception &e)
-        {
-            return std::unexpected(e.what());
-        }
-        catch (...)
-        {
-            return std::unexpected("unknown exception"s);
-        }
+    auto operator()(std::vector<std::byte> data) -> std::expected<std::size_t, std::string>
+    {
+        auto lock = std::unique_lock(mutex);
+        to_process.push_back(std::move(data));
+
+        cv.notify_one();
+
+        return 1zu;
     }
 
     inline static const auto hs_database_free = [](::hs_database_t *db) { ::hs_free_database(db); };
@@ -123,6 +172,12 @@ struct RegexHandler
     EV &ev;
     std::unique_ptr<::hs_database_t, decltype(hs_database_free)> db;
     std::unique_ptr<::hs_scratch_t, decltype(hs_scratch_free)> scratch;
+    std::deque<std::vector<std::byte>> to_process;
+    std::mutex mutex;
+    std::mutex write_mutex;
+    std::condition_variable cv;
+    std::atomic<bool> running;
+    std::vector<std::jthread> workers;
 };
 
 }

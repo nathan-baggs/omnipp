@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 #include <fcntl.h>
@@ -102,6 +103,11 @@ class EventLoop
     auto queue_openat(int parent_fd, ::beman::cstring_view path, int flags) noexcept -> void //
         pre(parent_fd == AT_FDCWD || static_cast<std::size_t>(parent_fd) < impl::safe_min)
     {
+        if (parent_fd != AT_FDCWD)
+        {
+            increase_dir_ref(parent_fd);
+        }
+
         openat_request_pool_.next(parent_fd, path.c_str(), flags);
     }
 
@@ -131,6 +137,8 @@ class EventLoop
 
             for (const auto &req : current_getdents_queue)
             {
+                dir_ref_count_[req.fd] = 1zu;
+
                 for (;;)
                 {
                     const auto read = ::syscall(
@@ -164,7 +172,7 @@ class EventLoop
                     }
                 }
 
-                queue_close(req.fd);
+                decrease_dir_ref(req.fd);
             }
 
             auto check_overflow = false;
@@ -215,6 +223,11 @@ class EventLoop
                         if (res >= 0)
                         {
                             openat_handler_(*this, res, req->is_file);
+                        }
+
+                        if (req->parent_fd != AT_FDCWD)
+                        {
+                            decrease_dir_ref(req->parent_fd);
                         }
 
                         openat_request_pool_.free(req);
@@ -269,6 +282,29 @@ class EventLoop
         delete r;
     };
 
+    auto increase_dir_ref(int fd) -> void
+    {
+        auto entry = dir_ref_count_.find(fd);
+        contract_assert(entry != std::ranges::cend(dir_ref_count_));
+
+        ++entry->second;
+    }
+
+    auto decrease_dir_ref(int fd) -> void
+    {
+        auto entry = dir_ref_count_.find(fd);
+        contract_assert(entry != std::ranges::cend(dir_ref_count_));
+        contract_assert(entry->second != 0zu);
+
+        --entry->second;
+
+        if (entry->second == 0zu)
+        {
+            queue_close(entry->first);
+            dir_ref_count_.erase(entry);
+        }
+    }
+
     OpenAtHandler openat_handler_;
     GetDentsHandler getdents_handler_;
     CloseHandler close_handler_;
@@ -279,5 +315,6 @@ class EventLoop
     RequestPool<Op::CLOSE, CloseRequest, impl::queue_size> close_request_pool_;
     RequestPool<Op::READ, ReadRequest, impl::queue_size> read_request_pool_;
     std::vector<GetDentsRequest> getdents_queue_;
+    std::unordered_map<int, std::size_t> dir_ref_count_;
 };
 }

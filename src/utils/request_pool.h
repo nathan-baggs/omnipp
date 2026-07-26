@@ -26,23 +26,24 @@ struct BaseRequest
 
 struct OpenAtRequest : BaseRequest
 {
-    auto reset(int fd, std::string path, int flags) -> void
+    auto reset(int parent_fd, std::string path, int flags) -> void
     {
         this->path = std::move(path);
-        this->fd = fd;
+        this->parent_fd = parent_fd;
         this->flags = flags;
         this->is_file = !(flags & O_DIRECTORY);
     }
 
     auto prep() -> void
     {
-        ::io_uring_prep_openat(sqe, fd, path.c_str(), flags, 0u);
+        ::io_uring_prep_openat(sqe, parent_fd, path.c_str(), flags, 0u);
     }
 
     std::string path;
     int fd = -1;
     int flags = 0;
     bool is_file = false;
+    int parent_fd = -1;
 };
 
 struct CloseRequest : BaseRequest

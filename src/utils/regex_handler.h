@@ -75,7 +75,7 @@ struct RegexHandler
         }
     }
 
-    auto operator()(std::span<const std::byte> data) -> std::expected<std::size_t, std::string>
+    auto operator()(std::vector<std::byte> data) -> std::expected<std::size_t, std::string>
     {
         const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
 

@@ -258,9 +258,8 @@ class EventLoop
                         }
                         else if (res > 0)
                         {
-                            const auto data = std::span(std::ranges::data(req->buffer), res);
-
-                            read_handler_(*this, req->fd, data);
+                            req->buffer.resize(res);
+                            read_handler_(*this, req->fd, std::move(req->buffer));
                             queue_read(req->fd, req->offset + res);
                         }
 

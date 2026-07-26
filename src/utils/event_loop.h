@@ -276,8 +276,8 @@ class EventLoop
 
                         if (res == 0)
                         {
-                            free_read_request(req);
                             queue_close(req->fd);
+                            read_request_pool_.free(req);
                         }
                         else if (res > 0)
                         {

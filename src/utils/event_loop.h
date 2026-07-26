@@ -283,6 +283,7 @@ class EventLoop
                         else if (res > 0)
                         {
                             --in_flight_;
+                            req->res = res;
                             if (const auto r = read_handler_(*this, req); !r)
                             {
                                 return std::unexpected(r.error());

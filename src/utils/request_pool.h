@@ -78,6 +78,7 @@ struct ReadRequest : BaseRequest
     int fd = -1;
     std::size_t offset{};
     std::vector<std::byte> buffer = std::vector<std::byte>(64zu * 1024zu);
+    std::size_t res{};
 };
 
 struct WriteRequest : BaseRequest

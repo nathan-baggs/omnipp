@@ -132,8 +132,7 @@ struct RegexHandler
             const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(req->buffer));
 
             ctx.matches.clear();
-            const auto res = ::hs_scan(
-                db.get(), data_str, std::ranges::size(req->buffer), 0, local_scratch.get(), impl::on_match, &ctx);
+            const auto res = ::hs_scan(db.get(), data_str, req->res, 0, local_scratch.get(), impl::on_match, &ctx);
 
             if (res != HS_SUCCESS)
             {

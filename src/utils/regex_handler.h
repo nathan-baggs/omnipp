@@ -64,7 +64,7 @@ struct RegexHandler
             auto compiler_error = std::unique_ptr<::hs_compile_error_t, decltype(hs_compiler_error_free)>{};
             const auto res = ::hs_compile(
                 regex.c_str(),
-                HS_FLAG_MULTILINE | HS_FLAG_SOM_LEFTMOST,
+                HS_FLAG_MULTILINE,
                 HS_MODE_BLOCK,
                 nullptr,
                 std::inout_ptr(db),
@@ -106,6 +106,9 @@ struct RegexHandler
             throw std::runtime_error(std::format("failed to create local cratch space: {}", scratch_res));
         }
 
+        auto ctx = impl::Context{};
+        thread_local auto write_buffer = std::string{};
+
         while (running)
         {
             auto data = std::vector<std::byte>{};
@@ -127,8 +130,7 @@ struct RegexHandler
 
             const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
 
-            auto ctx = impl::Context{};
-
+            ctx.matches.clear();
             const auto res =
                 ::hs_scan(db.get(), data_str, std::ranges::size(data), 0, local_scratch.get(), impl::on_match, &ctx);
 
@@ -145,14 +147,23 @@ struct RegexHandler
                     line.remove_prefix(1zu);
                 }
 
+                write_buffer.append_range(line);
+                write_buffer.append("\n");
+
+                if (std::ranges::size(write_buffer) > 4096zu)
                 {
                     auto lock = std::unique_lock{write_mutex};
-                    ::write(STDOUT_FILENO, std::ranges::data(line), std::ranges::size(line));
-
-                    static const auto new_line = '\n';
-                    ::write(STDOUT_FILENO, &new_line, 1);
+                    ::write(STDOUT_FILENO, std::ranges::data(write_buffer), std::ranges::size(write_buffer));
+                    write_buffer.clear();
                 }
             }
+        }
+
+        if (!std::ranges::empty(write_buffer))
+        {
+            auto lock = std::unique_lock{write_mutex};
+            ::write(STDOUT_FILENO, std::ranges::data(write_buffer), std::ranges::size(write_buffer));
+            write_buffer.clear();
         }
     }
 

@@ -84,7 +84,8 @@ class EventLoop
         , write_request_pool_{ring_.get(), in_flight_}
         , getdents_queue_{}
     {
-        if (::io_uring_queue_init(impl::queue_size, ring_.get(), 0) != 0)
+        if (::io_uring_queue_init(
+                impl::queue_size, ring_.get(), IORING_SETUP_COOP_TASKRUN | IORING_SETUP_SINGLE_ISSUER) != 0)
         {
             throw std::runtime_error("failed to initialise queue");
         }

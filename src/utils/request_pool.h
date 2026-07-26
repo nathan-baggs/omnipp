@@ -16,6 +16,7 @@ enum class Op
     OPENAT,
     CLOSE,
     READ,
+    WRITE,
 };
 
 struct BaseRequest
@@ -77,6 +78,25 @@ struct ReadRequest : BaseRequest
     int fd = -1;
     std::size_t offset{};
     std::vector<std::byte> buffer = std::vector<std::byte>(64zu * 1024zu);
+};
+
+struct WriteRequest : BaseRequest
+{
+    auto reset(int fd, std::string buffer, std::size_t offset) -> void
+    {
+        this->fd = fd;
+        this->offset = offset;
+        this->buffer = std::move(buffer);
+    }
+
+    auto prep() -> void
+    {
+        ::io_uring_prep_write(sqe, fd, std::ranges::data(buffer), std::ranges::size(buffer), offset);
+    }
+
+    int fd = -1;
+    std::size_t offset{};
+    std::string buffer;
 };
 
 template <class T>

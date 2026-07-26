@@ -61,7 +61,7 @@ inline auto max_fd() -> std::size_t
 
 }
 
-template <class OpenAtHandler, class GetDentsHandler, class CloseHandler, class ReadHandler>
+template <class OpenAtHandler, class GetDentsHandler, class CloseHandler, class ReadHandler, class WriteHandler>
 class EventLoop
 {
   public:
@@ -69,16 +69,19 @@ class EventLoop
         OpenAtHandler openat_handler,
         GetDentsHandler getdents_handler,
         CloseHandler close_handler,
-        ReadHandler read_handler)
+        ReadHandler read_handler,
+        WriteHandler write_handler)
         : openat_handler_{std::move(openat_handler)}
         , getdents_handler_{std::move(getdents_handler)}
         , close_handler_{std::move(close_handler)}
         , read_handler_{std::move(read_handler)}
+        , write_handler_{std::move(write_handler)}
         , ring_{new ::io_uring{}}
         , in_flight_{}
         , openat_request_pool_{ring_.get(), in_flight_}
         , close_request_pool_{ring_.get(), in_flight_}
         , read_request_pool_{ring_.get(), in_flight_}
+        , write_request_pool_{ring_.get(), in_flight_}
         , getdents_queue_{}
     {
         if (::io_uring_queue_init(impl::queue_size, ring_.get(), 0) != 0)
@@ -124,6 +127,11 @@ class EventLoop
     auto queue_read(int fd, std::size_t offset = 0zu) noexcept -> void
     {
         read_request_pool_.next(fd, offset);
+    }
+
+    auto queue_write(int fd, std::string buffer, std::size_t offset = 0zu) noexcept -> void
+    {
+        write_request_pool_.next(fd, std::move(buffer), offset);
     }
 
     [[nodiscard]] auto pump() noexcept -> std::expected<void, std::string>
@@ -259,6 +267,20 @@ class EventLoop
                         read_request_pool_.free(req);
                         break;
                     }
+                    case WRITE:
+                    {
+                        auto *req = static_cast<WriteRequest *>(base_req);
+
+                        write_handler_(*this, req->fd, res);
+
+                        if (req->offset + res != std::ranges::size(req->buffer))
+                        {
+                            queue_write(req->fd, std::move(req->buffer), req->offset + res);
+                        }
+
+                        write_request_pool_.free(req);
+                        break;
+                    }
                 }
 
                 ++count;
@@ -309,11 +331,13 @@ class EventLoop
     GetDentsHandler getdents_handler_;
     CloseHandler close_handler_;
     ReadHandler read_handler_;
+    WriteHandler write_handler_;
     std::unique_ptr<::io_uring, decltype(ring_free)> ring_;
     std::size_t in_flight_;
     RequestPool<Op::OPENAT, OpenAtRequest, impl::queue_size> openat_request_pool_;
     RequestPool<Op::CLOSE, CloseRequest, impl::queue_size> close_request_pool_;
     RequestPool<Op::READ, ReadRequest, impl::queue_size> read_request_pool_;
+    RequestPool<Op::WRITE, WriteRequest, impl::queue_size> write_request_pool_;
     std::vector<GetDentsRequest> getdents_queue_;
     std::unordered_map<int, std::size_t> dir_ref_count_;
 };

@@ -16,6 +16,7 @@
 #include "sink/write.h"
 #include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
+#include "utils/regex_handler.h"
 
 namespace om
 {
@@ -65,14 +66,22 @@ struct CloseHandler
 
 struct ReadHandler
 {
-    auto operator()(auto &, int, std::span<const std::byte> data)
+    template <class EV>
+    auto operator()(EV &ev, int, std::span<const std::byte> data)
     {
-        static const auto pipeline = transform::VectorScan{regex} | sink::Write{};
+        static auto regex_handler = RegexHandler<EV>{ev, regex};
 
-        execute(pipeline, data);
+        [[maybe_unused]] auto res = regex_handler(data);
     }
 
     ::beman::cstring_view regex;
+};
+
+struct WriteHandler
+{
+    auto operator()(auto &, int, std::size_t)
+    {
+    }
 };
 
 }
@@ -87,7 +96,12 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
     const auto regex = args[0];
     const auto location = args[1];
 
-    auto ev = EventLoop{impl::OpenAtHandler{}, impl::GetDentsHandler{}, impl::CloseHandler{}, impl::ReadHandler{regex}};
+    auto ev = EventLoop{
+        impl::OpenAtHandler{},
+        impl::GetDentsHandler{},
+        impl::CloseHandler{},
+        impl::ReadHandler{regex},
+        impl::WriteHandler{}};
 
     ev.queue_openat(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
 

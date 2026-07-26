@@ -147,7 +147,7 @@ struct RegexHandler
                     line.remove_prefix(1zu);
                 }
 
-                write_buffer.append_range(line);
+                write_buffer.append(std::ranges::data(line), std::ranges::size(line));
                 write_buffer.append("\n");
 
                 if (std::ranges::size(write_buffer) > 4096zu)

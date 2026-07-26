@@ -26,7 +26,7 @@ target_compile_options(omnipp_lib INTERFACE
 target_compile_features(omnipp_lib INTERFACE cxx_std_26)
 target_include_directories(omnipp_lib INTERFACE ${PROJECT_SOURCE_DIR}/src)
 
-add_executable(omnipp main.cpp)
+add_executable(omnipp main.cpp utils/memcpy_override.cpp)
 
 target_compile_options(omnipp PRIVATE -ggdb)
 
@@ -40,6 +40,12 @@ target_include_directories(omnipp PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party/vectorscan/include
     ${CMAKE_SOURCE_DIR}/third_party/vectorscan/src
 )
+
+target_include_directories(omnipp SYSTEM PRIVATE 
+    ${CMAKE_SOURCE_DIR}/third_party/dpdk
+)
+
+target_link_options(omnipp PRIVATE "-Wl,--wrap=memcpy")
 
 install(TARGETS omnipp DESTINATION bin)
 

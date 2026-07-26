@@ -64,7 +64,7 @@ struct RegexHandler
             auto compiler_error = std::unique_ptr<::hs_compile_error_t, decltype(hs_compiler_error_free)>{};
             const auto res = ::hs_compile(
                 regex.c_str(),
-                HS_FLAG_MULTILINE,
+                HS_FLAG_MULTILINE | HS_FLAG_SOM_LEFTMOST,
                 HS_MODE_BLOCK,
                 nullptr,
                 std::inout_ptr(db),
@@ -163,7 +163,6 @@ struct RegexHandler
         {
             auto lock = std::unique_lock{write_mutex};
             ::write(STDOUT_FILENO, std::ranges::data(write_buffer), std::ranges::size(write_buffer));
-            write_buffer.clear();
         }
     }
 

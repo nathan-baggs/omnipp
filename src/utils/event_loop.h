@@ -197,18 +197,20 @@ class EventLoop
                 break;
             }
 
-            ::io_uring_cqe *cqe = {};
-            auto ts = ::__kernel_timespec{.tv_sec = 5, .tv_nsec = 0};
-
-            const auto res = ::io_uring_submit_and_wait_timeout(ring_.get(), &cqe, 1u, &ts, nullptr);
+            const auto res = ::io_uring_submit(ring_.get());
             if (res < 0)
             {
-                const auto reason = res == -ETIME ? std::format("timeout") : std::format("{}", -res);
-                return std::unexpected(std::format("failed to submit pending requests: {}", reason));
+                return std::unexpected(std::format("failed to submit pending requests: {}", -res));
             }
 
+            ::io_uring_cqe *cqe{};
             auto head = unsigned{};
             auto count = unsigned{};
+
+            if (::io_uring_peek_cqe(ring_.get(), &cqe) != 0)
+            {
+                ::io_uring_wait_cqe(ring_.get(), &cqe);
+            }
 
             io_uring_for_each_cqe(ring_.get(), head, cqe)
             {

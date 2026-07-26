@@ -209,6 +209,7 @@ class EventLoop
             for (auto *req : read_free_queue)
             {
                 read_request_pool_.free(req);
+                ++in_flight_;
             }
 
             if (in_flight_ == 0)
@@ -281,6 +282,7 @@ class EventLoop
                         }
                         else if (res > 0)
                         {
+                            --in_flight_;
                             if (const auto r = read_handler_(*this, req); !r)
                             {
                                 return std::unexpected(r.error());

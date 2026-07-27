@@ -151,8 +151,6 @@ class Processor
                             continue;
                         }
 
-                        ::posix_fadvise(next_file, 0, stx.stx_size, POSIX_FADV_SEQUENTIAL);
-
                         execute(pipeline, next_file, stx.stx_size);
 
                         ::close(next_file);

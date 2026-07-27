@@ -14,6 +14,11 @@
 namespace om::sink
 {
 
+namespace impl
+{
+inline thread_local std::string buffer;
+}
+
 template <class T>
 struct WriteNode
 {
@@ -30,28 +35,56 @@ struct WriteNode
         -> std::expected<std::size_t, std::string>
     {
         auto write_amount = std::size_t{};
-        while (write_amount < std::ranges::size(data))
+
+        impl::buffer.append_range(data);
+        if (force_newline)
         {
-            const auto written_this_iter =
-                ::write(STDOUT_FILENO, std::ranges::data(data) + write_amount, std::ranges::size(data) - write_amount);
+            impl::buffer += "\n";
+        }
+
+        if (std::ranges::size(impl::buffer) > 4096zu)
+        {
+            while (write_amount < std::ranges::size(impl::buffer))
+            {
+                const auto written_this_iter = ::write(
+                    STDOUT_FILENO,
+                    std::ranges::data(impl::buffer) + write_amount,
+                    std::ranges::size(impl::buffer) - write_amount);
+                if (written_this_iter == -1)
+                {
+                    return std::unexpected(
+                        std::format(
+                            "failed to write: [{}/{} bytes] {}",
+                            write_amount,
+                            std::ranges::size(impl::buffer),
+                            strerror(errno)));
+                }
+
+                write_amount += written_this_iter;
+            }
+
+            impl::buffer.clear();
+        }
+
+        return write_amount;
+    }
+
+    auto operator()() const noexcept
+    {
+        auto write_amount = std::size_t{};
+        while (write_amount < std::ranges::size(impl::buffer))
+        {
+            const auto written_this_iter = ::write(
+                STDOUT_FILENO,
+                std::ranges::data(impl::buffer) + write_amount,
+                std::ranges::size(impl::buffer) - write_amount);
             if (written_this_iter == -1)
             {
-                return std::unexpected(
-                    std::format(
-                        "failed to write: [{}/{} bytes] {}", write_amount, std::ranges::size(data), strerror(errno)));
+                return;
             }
 
             write_amount += written_this_iter;
         }
-
-        if (force_newline)
-        {
-            static const auto new_line = '\n';
-            ::write(STDOUT_FILENO, &new_line, 1);
-            ++write_amount;
-        }
-
-        return write_amount;
     }
 };
 
@@ -60,5 +93,4 @@ struct Write : BaseSink<WriteNode>
 };
 
 static_assert(IsSink<Write>);
-
 }

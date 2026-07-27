@@ -138,6 +138,8 @@ struct VectorScanNode
                 }
             }
 
+            next();
+
             return std::ranges::size(ctx.matches);
         }
         catch (const std::exception &e)

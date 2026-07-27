@@ -31,7 +31,7 @@ struct ReadFileNode
     [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
     {
         constexpr auto huge_page_alignment = 2u * 1024u * 1024u;
-        alignas(huge_page_alignment) static auto static_buffer = std::array<std::byte, max_size>{};
+        alignas(huge_page_alignment) thread_local auto static_buffer = std::array<std::byte, max_size>{};
 
         auto bytes_output = std::size_t{};
 

@@ -1,19 +1,28 @@
 #pragma once
 
+#include <atomic>
+#include <condition_variable>
 #include <cstring>
-#include <fcntl.h>
+#include <deque>
+#include <iostream>
+#include <mutex>
 #include <print>
+#include <ranges>
 #include <span>
 #include <stdexcept>
 #include <string_view>
+#include <thread>
+#include <variant>
 
 #include <dirent.h>
+#include <fcntl.h>
 
 #include <beman/cstring_view/cstring_view.hpp>
 
 #include "config.h"
 #include "pipeline/pipeline.h"
 #include "sink/write.h"
+#include "source/read_file.h"
 #include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
 #include "utils/regex_handler.h"
@@ -25,70 +34,159 @@ namespace om
 namespace impl
 {
 
-struct OpenAtHandler
+class Processor
 {
-    auto operator()(auto &ev, int fd, bool is_file) const noexcept -> void
+  public:
+    ~Processor()
     {
-        if (is_file)
-        {
-            ev.queue_read(fd);
-        }
-        else
-        {
-            ev.queue_getdents(fd);
-        }
+        running_ = false;
+        cv_.notify_all();
     }
-};
 
-struct GetDentsHandler
-{
-    auto operator()(auto &ev, int parent_fd, bool is_file, ::beman::cstring_view path) const noexcept -> void
+    auto run(::beman::cstring_view location, ::beman::cstring_view regex) -> void
     {
-        if (path != "." && path != "..")
+        running_ = true;
+
+        const auto start_dir = ::openat(AT_FDCWD, location.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_NOATIME);
+        if (start_dir < 0)
         {
-            if (is_file)
+            throw std::runtime_error(std::format("failed to open initial directory: {}", location));
+        }
+
+        queue_.push_back(start_dir);
+        pending_ = 1zu;
+
+        for (auto i = 0zu; i < std::jthread::hardware_concurrency() - 1zu; ++i)
+        {
+            std::println("starting thread");
+            threads_.emplace_back([&] { worker(regex); });
+        }
+
+        worker(regex);
+    }
+
+  private:
+    auto worker(::beman::cstring_view regex) -> void
+    {
+        auto pipeline = source::ReadFile{} | transform::VectorScan{regex} | sink::Write{};
+
+        while (running_)
+        {
+            auto dir_fd = int{-1};
+
             {
-                ev.queue_openat(parent_fd, path, O_RDONLY | O_NOFOLLOW);
+                auto lock = std::unique_lock{mutex_};
+                cv_.wait(lock, [this] { return !std::ranges::empty(queue_) || !running_; });
+
+                if (!running_)
+                {
+                    break;
+                }
+
+                dir_fd = queue_.front();
+                queue_.pop_front();
             }
-            else
+
+            thread_local auto getdent_buffer = std::vector<std::byte>(32zu * 1024zu);
+
+            for (;;)
             {
-                ev.queue_openat(parent_fd, path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
+                const auto read = ::syscall(
+                    SYS_getdents64, dir_fd, std::ranges::data(getdent_buffer), std::ranges::size(getdent_buffer));
+
+                if (read < 0)
+                {
+                    std::println(std::cerr, "fd: {} {}", dir_fd, errno);
+                    break;
+                }
+
+                if (read == 0)
+                {
+                    break;
+                }
+
+                auto res_span = std::span(std::ranges::data(getdent_buffer), read);
+
+                thread_local auto local_dir_queue = std::vector<int>{};
+
+                while (!std::ranges::empty(res_span))
+                {
+                    const auto *dir = reinterpret_cast<const impl::linux_dirent64 *>(std::ranges::data(res_span));
+                    const auto name = ::beman::cstring_view{dir->d_name};
+
+                    const auto is_file = dir->d_type == DT_REG;
+                    const auto is_dir = dir->d_type == DT_DIR;
+
+                    if (is_dir)
+                    {
+                        if (name == "."sv || name == ".."sv)
+                        {
+                            res_span = res_span.subspan(dir->d_reclen);
+                            continue;
+                        }
+
+                        const auto next_dir =
+                            ::openat(dir_fd, name.c_str(), O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_NOATIME);
+                        if (next_dir < 0)
+                        {
+                            res_span = res_span.subspan(dir->d_reclen);
+                            continue;
+                        }
+
+                        local_dir_queue.push_back(next_dir);
+                    }
+                    else if (is_file)
+                    {
+                        const auto next_file = ::openat(dir_fd, name.c_str(), O_RDONLY | O_NOFOLLOW | O_NOATIME);
+                        if (next_file < 0)
+                        {
+                            res_span = res_span.subspan(dir->d_reclen);
+                            continue;
+                        }
+
+                        struct statx stx{};
+                        if (::statx(next_file, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
+                        {
+                            res_span = res_span.subspan(dir->d_reclen);
+                            continue;
+                        }
+
+                        ::posix_fadvise(next_file, 0, stx.stx_size, POSIX_FADV_SEQUENTIAL);
+
+                        execute(pipeline, next_file, stx.stx_size);
+
+                        ::close(next_file);
+                    }
+
+                    res_span = res_span.subspan(dir->d_reclen);
+                }
+
+                pending_.fetch_add(std::ranges::size(local_dir_queue), std::memory_order_relaxed);
+
+                {
+                    auto lock = std::unique_lock{mutex_};
+                    queue_.append_range(local_dir_queue);
+                    local_dir_queue.clear();
+                }
+
+                cv_.notify_one();
+            }
+
+            ::close(dir_fd);
+            if (pending_.fetch_sub(1zu, std::memory_order_acq_rel) == 1zu)
+            {
+                running_ = false;
+                cv_.notify_all();
             }
         }
     }
-};
 
-struct CloseHandler
-{
-    auto operator()(auto &)
-    {
-    }
-};
-
-struct ReadHandler
-{
-    template <class EV>
-    auto operator()(EV &ev, ReadRequest *req) -> std::expected<void, std::string>
-    {
-        static auto regex_handler = RegexHandler<EV>{ev, regex};
-
-        const auto res = regex_handler(req);
-        if (!res)
-        {
-            return std::unexpected(res.error());
-        }
-
-        return {};
-    }
-
-    ::beman::cstring_view regex;
-};
-
-struct WriteHandler
-{
-    auto operator()(auto &, int, std::size_t)
-    {
-    }
+    std::deque<int> queue_;
+    std::mutex mutex_;
+    std::condition_variable cv_;
+    std::atomic<bool> running_;
+    std::vector<std::jthread> threads_;
+    std::atomic<std::size_t> pending_;
 };
 
 }
@@ -103,19 +201,7 @@ inline auto grep([[maybe_unused]] const Config &config, std::span<const ::beman:
     const auto regex = args[0];
     const auto location = args[1];
 
-    auto ev = EventLoop{
-        impl::OpenAtHandler{},
-        impl::GetDentsHandler{},
-        impl::CloseHandler{},
-        impl::ReadHandler{regex},
-        impl::WriteHandler{}};
-
-    ev.queue_openat(location, O_RDONLY | O_DIRECTORY | O_NOFOLLOW);
-
-    const auto res = ev.pump();
-    if (!res)
-    {
-        throw std::runtime_error(res.error());
-    }
+    auto processor = impl::Processor{};
+    processor.run(location, regex);
 }
 }

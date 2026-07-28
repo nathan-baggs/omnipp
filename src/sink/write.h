@@ -4,6 +4,7 @@
 #include <cstring>
 #include <expected>
 #include <format>
+#include <mutex>
 #include <span>
 #include <string>
 
@@ -13,10 +14,9 @@
 
 namespace om::sink
 {
-
 namespace impl
 {
-inline thread_local std::string buffer;
+inline static auto mutex = std::mutex{};
 }
 
 template <class T>
@@ -34,57 +34,31 @@ struct WriteNode
     [[nodiscard]] auto operator()(std::string_view data, bool force_newline = false) const noexcept
         -> std::expected<std::size_t, std::string>
     {
+        auto lock = std::unique_lock{impl::mutex};
+
         auto write_amount = std::size_t{};
-
-        impl::buffer.append_range(data);
-        if (force_newline)
+        while (write_amount < std::ranges::size(data))
         {
-            impl::buffer += "\n";
-        }
-
-        if (std::ranges::size(impl::buffer) > 4096zu)
-        {
-            while (write_amount < std::ranges::size(impl::buffer))
-            {
-                const auto written_this_iter = ::write(
-                    STDOUT_FILENO,
-                    std::ranges::data(impl::buffer) + write_amount,
-                    std::ranges::size(impl::buffer) - write_amount);
-                if (written_this_iter == -1)
-                {
-                    return std::unexpected(
-                        std::format(
-                            "failed to write: [{}/{} bytes] {}",
-                            write_amount,
-                            std::ranges::size(impl::buffer),
-                            strerror(errno)));
-                }
-
-                write_amount += written_this_iter;
-            }
-
-            impl::buffer.clear();
-        }
-
-        return write_amount;
-    }
-
-    auto operator()() const noexcept
-    {
-        auto write_amount = std::size_t{};
-        while (write_amount < std::ranges::size(impl::buffer))
-        {
-            const auto written_this_iter = ::write(
-                STDOUT_FILENO,
-                std::ranges::data(impl::buffer) + write_amount,
-                std::ranges::size(impl::buffer) - write_amount);
+            const auto written_this_iter =
+                ::write(STDOUT_FILENO, std::ranges::data(data) + write_amount, std::ranges::size(data) - write_amount);
             if (written_this_iter == -1)
             {
-                return;
+                return std::unexpected(
+                    std::format(
+                        "failed to write: [{}/{} bytes] {}", write_amount, std::ranges::size(data), strerror(errno)));
             }
 
             write_amount += written_this_iter;
         }
+
+        if (force_newline)
+        {
+            static const auto new_line = '\n';
+            ::write(STDOUT_FILENO, &new_line, 1);
+            ++write_amount;
+        }
+
+        return write_amount;
     }
 };
 
@@ -93,4 +67,5 @@ struct Write : BaseSink<WriteNode>
 };
 
 static_assert(IsSink<Write>);
+
 }

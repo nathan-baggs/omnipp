@@ -37,8 +37,21 @@ constexpr auto operator|(L left, R right)
     }
 }
 
+template <std::size_t Index, std::size_t Counter = 0zu>
+auto &get(auto &node)
+{
+    if constexpr (Index == Counter)
+    {
+        return node;
+    }
+    else
+    {
+        return get<Index, Counter + 1zu>(node.next);
+    }
+}
+
 template <class... Args>
-auto execute(const auto &pipeline, Args &&...args)
+auto execute(auto &pipeline, Args &&...args)
 {
     const auto res = pipeline(std::forward<Args>(args)...);
     if (!res)

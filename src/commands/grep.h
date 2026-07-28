@@ -23,6 +23,7 @@
 #include "pipeline/pipeline.h"
 #include "sink/write.h"
 #include "source/read_file.h"
+#include "transform/batch.h"
 #include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
 #include "utils/regex_handler.h"
@@ -68,7 +69,7 @@ class Processor
   private:
     auto worker(::beman::cstring_view regex) -> void
     {
-        auto pipeline = source::ReadFile{} | transform::VectorScan{regex} | sink::Write{};
+        auto pipeline = source::ReadFile{} | transform::VectorScan{regex} | transform::Batch{} | sink::Write{};
 
         while (running_)
         {
@@ -177,6 +178,8 @@ class Processor
                 cv_.notify_all();
             }
         }
+
+        [[maybe_unused]] const auto flush = get<2>(pipeline)();
     }
 
     std::deque<int> queue_;

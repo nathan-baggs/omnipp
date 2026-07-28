@@ -53,8 +53,7 @@ constexpr auto to_byte_span(std::string_view str) -> std::span<const std::byte>
 template <class Next>
 struct TreeSitterNode
 {
-    [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
-        -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(std::span<const std::byte> data) noexcept -> std::expected<std::size_t, std::string>
     {
         const auto *language = tree_sitter_cpp();
 

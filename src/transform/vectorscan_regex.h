@@ -106,8 +106,7 @@ struct VectorScanNode
     VectorScanNode(VectorScanNode &&) = default;
     auto operator=(VectorScanNode &&) -> VectorScanNode & = default;
 
-    [[nodiscard]] auto operator()(std::span<const std::byte> data) const noexcept
-        -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(std::span<const std::byte> data) noexcept -> std::expected<std::size_t, std::string>
     {
         const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
 
@@ -131,14 +130,18 @@ struct VectorScanNode
                     line.remove_prefix(1zu);
                 }
 
-                const auto next_res = next(line, true);
+                auto next_res = next(line);
+                if (!next_res)
+                {
+                    return std::unexpected(next_res.error());
+                }
+
+                next_res = next("\n");
                 if (!next_res)
                 {
                     return std::unexpected(next_res.error());
                 }
             }
-
-            next();
 
             return std::ranges::size(ctx.matches);
         }

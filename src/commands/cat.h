@@ -100,19 +100,19 @@ inline auto cat([[maybe_unused]] const Config &config, std::span<const ::beman::
 
     if (impl::can_copy_file_range(file.mode, out_stx.stx_mode))
     {
-        const auto pipeline = source::CopyFileRange{} | sink::NullSink{};
+        auto pipeline = source::CopyFileRange{} | sink::NullSink{};
         execute(pipeline, file.fd.get(), file.size);
         return;
     }
     else if (impl::can_direct_pipe(out_stx.stx_mode))
     {
-        const auto pipeline = source::DirectSplice{} | sink::NullSink{};
+        auto pipeline = source::DirectSplice{} | sink::NullSink{};
         execute(pipeline, file.fd.get(), file.size);
         return;
     }
     else if (impl::can_middleman_splice(out_stx.stx_mode))
     {
-        const auto pipeline = source::Splice{} | sink::Splice{};
+        auto pipeline = source::Splice{} | sink::Splice{};
         execute(pipeline, file.fd.get(), file.size);
         return;
     }
@@ -120,19 +120,19 @@ inline auto cat([[maybe_unused]] const Config &config, std::span<const ::beman::
     {
         if (config.colour_output || impl::is_terminal_output())
         {
-            const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
+            auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
             execute(pipeline, file.fd.get(), file.size);
             return;
         }
         else
         {
-            const auto pipeline = source::ReadFile{} | sink::Write{};
+            auto pipeline = source::ReadFile{} | sink::Write{};
             execute(pipeline, file.fd.get(), file.size);
             return;
         }
     }
 
-    const auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
+    auto pipeline = source::ReadFile{} | transform::TreeSitter{} | sink::Write{};
     execute(pipeline, file.fd.get(), file.size);
 }
 

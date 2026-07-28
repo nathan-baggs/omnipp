@@ -112,7 +112,8 @@ struct VectorScanNode
 
         try
         {
-            auto ctx = impl::Context{};
+            thread_local auto ctx = impl::Context{};
+            ctx.matches.clear();
 
             const auto res = ::hs_scan(
                 state.db.get(), data_str, std::ranges::size(data), 0, state.scratch.get(), impl::on_match, &ctx);
@@ -131,11 +132,6 @@ struct VectorScanNode
                 const auto line_end = next_newline == std::string_view::npos ? str.size() : next_newline;
 
                 auto line = str.substr(line_start, line_end - line_start);
-
-                if (!line.empty() && line.back() == '\r')
-                {
-                    line.remove_suffix(1zu);
-                }
 
                 auto next_res = next(line);
                 if (!next_res)

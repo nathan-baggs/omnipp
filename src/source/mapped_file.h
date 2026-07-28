@@ -30,7 +30,7 @@ namespace om::source
 template <class Next>
 struct MappedFileNode
 {
-    [[nodiscard]] auto operator()(int fd, std::size_t size) const noexcept -> std::expected<std::size_t, std::string>
+    [[nodiscard]] auto operator()(int fd, std::size_t size) noexcept -> std::expected<std::size_t, std::string>
     {
         auto *map_ptr = ::mmap(nullptr, size, PROT_READ, MAP_PRIVATE, fd, 0);
         if (!map_ptr)

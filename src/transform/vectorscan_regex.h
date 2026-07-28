@@ -26,7 +26,6 @@ namespace impl
 
 struct Match
 {
-    std::size_t begin;
     std::size_t end;
 };
 
@@ -35,10 +34,10 @@ struct Context
     std::vector<Match> matches;
 };
 
-inline auto on_match(unsigned int, unsigned long long from, unsigned long long to, unsigned int, void *context) -> int
+inline auto on_match(unsigned int, unsigned long long, unsigned long long to, unsigned int, void *context) -> int
 {
     auto *ctx = static_cast<Context *>(context);
-    ctx->matches.emplace_back(from, to);
+    ctx->matches.emplace_back(to);
 
     return 0;
 }
@@ -59,7 +58,7 @@ struct VectorScanState
             auto compiler_error = std::unique_ptr<::hs_compile_error_t, decltype(hs_compiler_error_free)>{};
             const auto res = ::hs_compile(
                 regex.c_str(),
-                HS_FLAG_MULTILINE | HS_FLAG_SOM_LEFTMOST,
+                HS_FLAG_MULTILINE,
                 HS_MODE_BLOCK,
                 nullptr,
                 std::inout_ptr(db),
@@ -109,6 +108,7 @@ struct VectorScanNode
     [[nodiscard]] auto operator()(std::span<const std::byte> data) noexcept -> std::expected<std::size_t, std::string>
     {
         const auto *data_str = reinterpret_cast<const char *>(std::ranges::data(data));
+        const auto str = std::string_view{data_str, std::ranges::size(data)};
 
         try
         {
@@ -122,12 +122,19 @@ struct VectorScanNode
                 return std::unexpected("failed to parse input");
             }
 
-            for (const auto &[begin, end] : ctx.matches)
+            for (const auto &match : ctx.matches)
             {
-                auto line = std::string_view(data_str + begin, data_str + end);
-                while (!line.empty() && (line.front() == '\n' || line.front() == '\r'))
+                const auto match_end = match.end;
+                const auto previous_newline = str.substr(0zu, match_end).find_last_of('\n');
+                const auto line_start = previous_newline == std::string_view::npos ? 0zu : previous_newline + 1zu;
+                const auto next_newline = str.find('\n', match_end);
+                const auto line_end = next_newline == std::string_view::npos ? str.size() : next_newline;
+
+                auto line = str.substr(line_start, line_end - line_start);
+
+                if (!line.empty() && line.back() == '\r')
                 {
-                    line.remove_prefix(1zu);
+                    line.remove_suffix(1zu);
                 }
 
                 auto next_res = next(line);

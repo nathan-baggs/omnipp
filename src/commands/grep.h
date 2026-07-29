@@ -24,6 +24,7 @@
 #include "sink/write.h"
 #include "source/read_file.h"
 #include "transform/batch.h"
+#include "transform/re2_regex.h"
 #include "transform/vectorscan_regex.h"
 #include "utils/event_loop.h"
 #include "utils/regex_handler.h"
@@ -69,7 +70,7 @@ class Processor
   private:
     auto worker(::beman::cstring_view regex) -> void
     {
-        auto pipeline = source::ReadFile{} | transform::VectorScan{regex} | transform::Batch{} | sink::Write{};
+        auto pipeline = source::ReadFile{} | transform::Re2Regex{regex} | transform::Batch{} | sink::Write{};
 
         while (running_)
         {

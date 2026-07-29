@@ -60,3 +60,10 @@ set(BUILD_NATIVE ON CACHE BOOL "Tell Vectorscan to optimize natively" FORCE)
 add_subdirectory(vectorscan EXCLUDE_FROM_ALL)
 
 add_subdirectory(mimalloc EXCLUDE_FROM_ALL)
+
+add_subdirectory(abseil-cpp EXCLUDE_FROM_ALL)
+set(RE2_USE_ABSEIL OFF CACHE BOOL "Build RE2 without Abseil dependency" FORCE)
+set(RE2_INSTALL OFF CACHE BOOL "Disable RE2 install rules" FORCE)
+
+add_subdirectory(re2 EXCLUDE_FROM_ALL)
+

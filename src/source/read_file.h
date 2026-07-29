@@ -49,7 +49,7 @@ struct ReadFileNode
                 break;
             }
 
-            const auto processed = next(std::span(std::ranges::data(static_buffer), read_this_iter));
+            auto processed = next(std::span(std::ranges::data(static_buffer), read_this_iter));
             if (!processed)
             {
                 return std::unexpected(processed.error());

@@ -56,7 +56,8 @@ set(Boost_ROOT "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "
 set(BOOST_ROOT "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "" FORCE)
 set(BOOST_INCLUDEDIR "${CMAKE_SOURCE_DIR}/third_party/vectorscan/include" CACHE PATH "" FORCE)
 set(FAT_RUNTIME OFF CACHE BOOL "Disable Vectorscan Fat Runtime" FORCE)
-set(BUILD_NATIVE ON CACHE BOOL "Tell Vectorscan to optimize natively" FORCE)
+set(USE_CPU_NATIVE ON CACHE BOOL "Build Vectorscan tuned for this CPU" FORCE)
+set(BUILD_AVX2 ON CACHE BOOL "Compile Vectorscan AVX2 engine implementations" FORCE)
 add_subdirectory(vectorscan EXCLUDE_FROM_ALL)
 
 add_subdirectory(mimalloc EXCLUDE_FROM_ALL)

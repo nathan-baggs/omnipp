@@ -70,7 +70,7 @@ class Processor
   private:
     auto worker(::beman::cstring_view regex) -> void
     {
-        auto pipeline = source::ReadFile{} | transform::Re2Regex{regex} | transform::Batch{} | sink::Write{};
+        auto pipeline = source::ReadFile{} | transform::VectorScan{regex} | transform::Batch{} | sink::Write{};
 
         while (running_)
         {

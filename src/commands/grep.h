@@ -146,14 +146,14 @@ class Processor
                             continue;
                         }
 
-                        struct statx stx{};
-                        if (::statx(next_file, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
-                        {
-                            res_span = res_span.subspan(dir->d_reclen);
-                            continue;
-                        }
+                        // struct statx stx{};
+                        // if (::statx(next_file, "", AT_EMPTY_PATH, STATX_SIZE, &stx) != 0)
+                        // {
+                        //     res_span = res_span.subspan(dir->d_reclen);
+                        //     continue;
+                        // }
 
-                        execute(pipeline, next_file, stx.stx_size);
+                        execute(pipeline, next_file, 0zu);
 
                         ::close(next_file);
                     }

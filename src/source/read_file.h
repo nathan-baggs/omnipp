@@ -36,10 +36,9 @@ struct ReadFileNode
         auto bytes_output = std::size_t{};
 
         auto read_amount = std::size_t{};
-        while (read_amount != size)
+        for (;;)
         {
-            const auto chunk_size = std::min(std::ranges::size(static_buffer), size - read_amount);
-            const auto read_this_iter = ::pread(fd, std::ranges::data(static_buffer), chunk_size, read_amount);
+            const auto read_this_iter = ::pread(fd, std::ranges::data(static_buffer), max_size, read_amount);
             if (read_this_iter == -1)
             {
                 return std::unexpected(std::format("failed to read: [{}/{} bytes]", read_amount, size));
